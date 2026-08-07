@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil, FileText, FileSignature, MapPin } from 'lucide-react'
+import { ArrowLeft, Pencil, FileText, FileSignature, MapPin, Merge } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '@/components/ui/KpiCard'
@@ -13,6 +13,7 @@ import { toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { useClient, useUpdateClient } from './api'
 import { ClientFormSheet } from './ClientFormSheet'
+import { MergeClientModal } from './MergeClientModal'
 import { InvoicesListPage } from '@/features/invoices/InvoicesListPage'
 import { QuotesListPage } from '@/features/quotes/QuotesListPage'
 
@@ -31,6 +32,7 @@ export function ClientDetailPage() {
   const updateClient = useUpdateClient()
   const [activeTab, setActiveTab] = useState('factures')
   const [editOpen, setEditOpen] = useState(false)
+  const [mergeOpen, setMergeOpen] = useState(false)
   const [notes, setNotes] = useState<string | null>(null)
 
   if (isLoading || !client) {
@@ -81,15 +83,30 @@ export function ClientDetailPage() {
             <Pencil className="h-4 w-4" />
             Modifier
           </Button>
+          <Button variant="secondary" onClick={() => setMergeOpen(true)}>
+            <Merge className="h-4 w-4" />
+            Fusionner
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard label="CA total" value={formatMoney(toMinorUnits(String(financials?.ca_total_mur ?? 0)), 'MUR')} state="paid" />
         <KpiCard
           label="Encours"
           value={formatMoney(toMinorUnits(String(financials?.encours_mur ?? 0)), 'MUR')}
           state={financials?.has_overdue ? 'overdue' : 'pending'}
+        />
+        <KpiCard
+          label="Délai de paiement moyen"
+          value={financials?.avg_payment_delay_days != null ? `${Math.round(financials.avg_payment_delay_days)} j` : '—'}
+          state={
+            financials?.avg_payment_delay_days != null && financials.avg_payment_delay_days > 45
+              ? 'overdue'
+              : financials?.avg_payment_delay_days != null && financials.avg_payment_delay_days > 30
+                ? 'pending'
+                : 'neutral'
+          }
         />
         <KpiCard label="Documents" value={String(financials?.invoice_count ?? 0)} state="neutral" />
         <KpiCard label="Taux d'acceptation devis" value={acceptanceRate ?? '—'} state="neutral" />
@@ -126,6 +143,7 @@ export function ClientDetailPage() {
       )}
 
       <ClientFormSheet open={editOpen} onClose={() => setEditOpen(false)} client={client} />
+      <MergeClientModal open={mergeOpen} onClose={() => setMergeOpen(false)} currentClient={client} onMerged={() => {}} />
     </div>
   )
 }

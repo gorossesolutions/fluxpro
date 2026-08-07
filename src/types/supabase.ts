@@ -522,6 +522,7 @@ export interface Database {
           has_overdue: boolean
           invoice_count: number
           last_invoice_date: string | null
+          avg_payment_delay_days: number | null
         }
         Relationships: []
       }
@@ -530,6 +531,10 @@ export interface Database {
       fn_allocate_document_number: {
         Args: { p_prefix: DocumentNumberPrefix; p_year: number }
         Returns: string
+      }
+      fn_merge_clients: {
+        Args: { p_keep_id: string; p_merge_id: string }
+        Returns: undefined
       }
     }
     Enums: {

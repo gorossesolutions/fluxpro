@@ -14,6 +14,9 @@ export interface ClientFinancials {
   has_overdue: boolean
   invoice_count: number
   last_invoice_date: string | null
+  /** Average days between issue and full payment across this client's paid invoices — the
+   * payment-behaviour signal (spec §6.2). Null when they have no paid invoices yet. */
+  avg_payment_delay_days: number | null
 }
 
 export type ClientWithFinancials = Client & { financials: ClientFinancials | null }
@@ -151,6 +154,29 @@ export function useUnarchiveClient() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.clients.all })
+    },
+  })
+}
+
+export interface MergeClientsInput {
+  keepId: string
+  mergeId: string
+}
+
+/** Merges a duplicate client into the one being kept — re-points every invoice/quote (even
+ * issued/locked ones, spec-compliant per fn_merge_clients' own reasoning) and archives the
+ * duplicate. Server-side, transactional, single RPC call (0009_merge_clients_function.sql). */
+export function useMergeClients() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ keepId, mergeId }: MergeClientsInput): Promise<void> => {
+      const { error } = await supabase.rpc('fn_merge_clients', { p_keep_id: keepId, p_merge_id: mergeId })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.clients.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.all })
     },
   })
 }
