@@ -5,6 +5,14 @@ import { MorePage } from './MorePage'
 import { ComingSoonPage } from './ComingSoonPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { ClientsListPage } from '@/features/clients/ClientsListPage'
+import { ClientDetailPage } from '@/features/clients/ClientDetailPage'
+import { InvoicesListPage } from '@/features/invoices/InvoicesListPage'
+import { InvoiceEditorPage } from '@/features/invoices/InvoiceEditorPage'
+import { InvoiceDetailPage } from '@/features/invoices/InvoiceDetailPage'
+import { QuotesListPage } from '@/features/quotes/QuotesListPage'
+import { QuoteEditorPage } from '@/features/quotes/QuoteEditorPage'
+import { QuoteDetailPage } from '@/features/quotes/QuoteDetailPage'
 
 export const router = createBrowserRouter([
   { path: '/connexion', element: <LoginPage /> },
@@ -17,9 +25,14 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: 'clients', element: <ComingSoonPage title="Clients" /> },
-      { path: 'factures', element: <ComingSoonPage title="Factures" /> },
-      { path: 'devis', element: <ComingSoonPage title="Devis" /> },
+      { path: 'clients', element: <ClientsListPage /> },
+      { path: 'clients/:id', element: <ClientDetailPage /> },
+      { path: 'factures', element: <InvoicesListPage /> },
+      { path: 'factures/nouvelle', element: <InvoiceEditorPage /> },
+      { path: 'factures/:id', element: <InvoiceDetailPage /> },
+      { path: 'devis', element: <QuotesListPage /> },
+      { path: 'devis/nouveau', element: <QuoteEditorPage /> },
+      { path: 'devis/:id', element: <QuoteDetailPage /> },
       { path: 'depenses', element: <ComingSoonPage title="Dépenses" /> },
       { path: 'documents', element: <ComingSoonPage title="Documents" /> },
       { path: 'rappels', element: <ComingSoonPage title="Rappels" /> },

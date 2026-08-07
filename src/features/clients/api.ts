@@ -95,7 +95,7 @@ export function useClientSearch(search: string) {
 export function useCreateClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: ClientInsert): Promise<Client> => {
+    mutationFn: async (input: Omit<ClientInsert, 'user_id'>): Promise<Client> => {
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error('Not authenticated')
       const { data, error } = await supabase

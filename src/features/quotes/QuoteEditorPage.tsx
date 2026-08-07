@@ -1,0 +1,258 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Save, Send } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { NumberInput } from '@/components/ui/NumberInput'
+import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { useToast } from '@/components/ui/Toast'
+import { ClientCombobox } from '@/features/clients/ClientCombobox'
+import { useClient, type Client } from '@/features/clients/api'
+import { useBankAccounts, resolveCountryDefaults, useCountryRules } from '@/features/reference/api'
+import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
+import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
+import { formatMoney } from '@/lib/format'
+import { useQuote, useSaveQuoteDraft, useIssueQuote } from './api'
+
+const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
+
+function addDays(date: string, days: number): string {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+export function QuoteEditorPage() {
+  const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const preselectedClientId = searchParams.get('client')
+  const navigate = useNavigate()
+  const { push } = useToast()
+
+  const { data: existing, isLoading: loadingExisting } = useQuote(id)
+  const { data: preselectedClient } = useClient(preselectedClientId ?? undefined)
+  const { data: loadedClient } = useClient(existing?.client_id ?? undefined)
+  const { data: bankAccounts = [] } = useBankAccounts()
+  const { data: countryRules = [] } = useCountryRules()
+  const saveDraft = useSaveQuoteDraft()
+  const issueQuote = useIssueQuote()
+
+  const [client, setClient] = useState<Client | null>(null)
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10))
+  const [validUntil, setValidUntil] = useState(addDays(new Date().toISOString().slice(0, 10), 30))
+  const [bankAccountId, setBankAccountId] = useState<string | null>(null)
+  const [currency, setCurrency] = useState('EUR')
+  const [taxRate, setTaxRate] = useState('0')
+  const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    if (preselectedClient && !client && !existing) {
+      setClient(preselectedClient)
+      setCurrency(preselectedClient.default_currency)
+      if (preselectedClient.default_tax_rate != null) setTaxRate(String(preselectedClient.default_tax_rate))
+      if (preselectedClient.default_bank_account_id) setBankAccountId(preselectedClient.default_bank_account_id)
+    }
+  }, [preselectedClient, client, existing])
+
+  useEffect(() => {
+    if (!existing) return
+    setIssueDate(existing.issue_date)
+    setValidUntil(existing.valid_until ?? '')
+    setBankAccountId(existing.bank_account_id)
+    setCurrency(existing.currency)
+    setTaxRate(String(existing.tax_rate))
+    setNotes(existing.notes ?? '')
+    if (existing.quote_lines.length > 0) {
+      setLines(
+        existing.quote_lines.map((l) => ({
+          title: l.title,
+          description: l.description ?? '',
+          quantity: String(l.quantity),
+          unit_price: String(l.unit_price),
+        })),
+      )
+    }
+  }, [existing])
+
+  useEffect(() => {
+    if (loadedClient && existing) setClient(loadedClient)
+  }, [loadedClient, existing])
+
+  const defaults = client ? resolveCountryDefaults(countryRules, client.country_code) : null
+  const supplyTreatment = defaults?.supplyTreatment ?? 'zero_rated_export'
+  const effectiveMention = defaults?.countryMention ?? null
+
+  const subtotal = computeSubtotal(lines)
+  const subtotalMinor = toMinorUnits(subtotal)
+  const taxAmountMinor = mulMoney(subtotalMinor, Number.parseFloat(taxRate || '0') / 100)
+  const totalMinor = addMoney(subtotalMinor, taxAmountMinor)
+
+  const isLocked = existing?.locked ?? false
+
+  const handleClientChange = (_clientId: string, selected: Client) => {
+    setClient(selected)
+    setCurrency(selected.default_currency)
+    if (selected.default_tax_rate != null) setTaxRate(String(selected.default_tax_rate))
+    if (selected.default_bank_account_id) setBankAccountId(selected.default_bank_account_id)
+  }
+
+  const buildPayload = () => ({
+    quote: {
+      ...(existing ? { id: existing.id } : {}),
+      client_id: client?.id ?? null,
+      client_snapshot: client ? { name: client.name, email: client.email } : {},
+      issue_date: issueDate,
+      valid_until: validUntil || null,
+      currency,
+      tax_rate: Number.parseFloat(taxRate || '0'),
+      subtotal: Number(subtotal),
+      tax_amount: Number(fromMinorUnits(taxAmountMinor)),
+      total: Number(fromMinorUnits(totalMinor)),
+      supply_treatment: supplyTreatment,
+      country_mention: effectiveMention,
+      bank_account_id: bankAccountId,
+      payment_terms: 30,
+      notes: notes || null,
+    },
+    lines: lines.map((l) => ({
+      title: l.title,
+      description: l.description || null,
+      quantity: Number.parseFloat(l.quantity || '0'),
+      unit_price: Number(l.unit_price || '0'),
+      line_total: Number(fromMinorUnits(mulMoney(toMinorUnits(l.unit_price || '0'), Number.parseFloat(l.quantity || '0')))),
+    })),
+  })
+
+  const handleSaveDraft = async () => {
+    try {
+      const saved = await saveDraft.mutateAsync(buildPayload())
+      push('success', 'Devis enregistré comme brouillon')
+      if (!existing) navigate(`/devis/${saved.id}`, { replace: true })
+    } catch (err) {
+      push('error', `Échec : ${(err as Error).message}`)
+    }
+  }
+
+  const handleSend = async () => {
+    if (!client) {
+      push('error', 'Sélectionne un client avant d\'envoyer le devis')
+      return
+    }
+    try {
+      const saved = existing ?? (await saveDraft.mutateAsync(buildPayload()))
+      await saveDraft.mutateAsync({ ...buildPayload(), quote: { ...buildPayload().quote, id: saved.id } })
+      await issueQuote.mutateAsync({ id: saved.id })
+      push('success', 'Devis envoyé')
+      navigate(`/devis/${saved.id}`, { replace: true })
+    } catch (err) {
+      push('error', `Échec : ${(err as Error).message}`)
+    }
+  }
+
+  if (id && loadingExisting) return <Skeleton className="h-96 w-full" />
+
+  return (
+    <div className="flex flex-col gap-6 pb-24">
+      <h1 className="text-xl font-semibold text-ink">
+        {existing?.number ?? 'Nouveau devis'}
+        {isLocked && <span className="ml-2 text-sm font-normal text-slate">(envoyé — verrouillé)</span>}
+      </h1>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-slate">Client</h2>
+        {client ? (
+          <div className="flex items-center justify-between rounded-lg bg-canvas p-3">
+            <div>
+              <p className="font-medium text-ink">{client.name}</p>
+              <p className="text-sm text-slate">{client.email}</p>
+            </div>
+            {!isLocked && (
+              <Button variant="ghost" size="sm" onClick={() => setClient(null)}>
+                Changer
+              </Button>
+            )}
+          </div>
+        ) : (
+          <ClientCombobox value={null} onChange={handleClientChange} />
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-slate">Document</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Numéro</label>
+            <Input value={existing?.number ?? "Attribué à l'envoi"} disabled />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Date</label>
+            <DatePicker value={issueDate} disabled={isLocked} onChange={(e) => setIssueDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
+            <DatePicker value={validUntil} disabled={isLocked} onChange={(e) => setValidUntil(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Compte bancaire</label>
+            <Select disabled={isLocked} value={bankAccountId ?? ''} onChange={(e) => setBankAccountId(e.target.value || null)}>
+              <option value="">Sélectionner…</option>
+              {bankAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.bank_name} ({account.currency})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
+            <Select disabled={isLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-slate">Lignes de prestation</h2>
+        <LineItemsEditor lines={lines} onChange={setLines} currency={currency} />
+      </Card>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface px-4 py-3 sm:left-16 lg:left-60">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-slate">
+              Sous-total: <span className="tabular-nums font-medium text-ink">{formatMoney(subtotalMinor, currency)}</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-slate">Taxe:</span>
+              <NumberInput className="w-20" disabled={isLocked} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} suffix="%" />
+            </div>
+            <span className="text-slate">
+              Total: <span className="tabular-nums text-base font-semibold text-ink">{formatMoney(totalMinor, currency)}</span>
+            </span>
+          </div>
+          {!isLocked && (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={handleSaveDraft} disabled={saveDraft.isPending}>
+                <Save className="h-4 w-4" />
+                Enregistrer comme brouillon
+              </Button>
+              <Button onClick={handleSend} disabled={saveDraft.isPending || issueQuote.isPending}>
+                <Send className="h-4 w-4" />
+                Envoyer le devis
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

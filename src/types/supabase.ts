@@ -32,9 +32,15 @@ export type MatchedEntityType = 'invoice' | 'expense'
 export type DocumentNumberPrefix = 'FAC' | 'DEV' | 'AV'
 export type EbsTransactionType = 'TC01' | 'TC02' | 'TC03' | 'TC04' | 'TC05' | 'TC06'
 
+// A column with no NOT NULL constraint is always optional on Insert (omitting it just leaves
+// it NULL) — independent of whether it also has a SQL DEFAULT. InsertDefaults below is only
+// for NOT NULL columns that have a DEFAULT (id, created_at, status, etc.); nullable columns
+// are picked up here automatically so they don't need to be listed by every table.
+type NullableKeys<Row> = { [K in keyof Row]: null extends Row[K] ? K : never }[keyof Row]
+
 interface Table<Row, InsertDefaults extends keyof Row = never> {
   Row: Row
-  Insert: Omit<Row, InsertDefaults> & Partial<Pick<Row, InsertDefaults>>
+  Insert: Omit<Row, InsertDefaults | NullableKeys<Row>> & Partial<Pick<Row, InsertDefaults | NullableKeys<Row>>>
   Update: Partial<Row>
   // No foreign-key relationships are modelled for embedded-resource queries (select('*, foo(*)'))
   // — every read in this app is a flat select with separate queries joined client-side.
