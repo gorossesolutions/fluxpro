@@ -101,8 +101,8 @@ export function QuoteEditorPage() {
   const handleClientChange = (_clientId: string, selected: Client) => {
     setClient(selected)
     setCurrency(selected.default_currency)
-    if (selected.default_tax_rate != null) setTaxRate(String(selected.default_tax_rate))
-    if (selected.default_bank_account_id) setBankAccountId(selected.default_bank_account_id)
+    setTaxRate(selected.default_tax_rate != null ? String(selected.default_tax_rate) : '0')
+    setBankAccountId(selected.default_bank_account_id ?? null)
   }
 
   const buildPayload = () => ({

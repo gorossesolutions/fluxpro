@@ -125,9 +125,12 @@ export function InvoiceEditorPage() {
     setClient(selected)
     setCurrency(selected.default_currency)
     setPaymentTerms(selected.default_payment_terms)
-    if (selected.default_tax_rate != null) setTaxRate(String(selected.default_tax_rate))
-    if (selected.default_bank_account_id) setBankAccountId(selected.default_bank_account_id)
+    setTaxRate(selected.default_tax_rate != null ? String(selected.default_tax_rate) : '0')
+    setBankAccountId(selected.default_bank_account_id ?? null)
     setDueDate(addDays(issueDate, selected.default_payment_terms))
+    // Reset any manually-edited mention from the previous client so the newly resolved
+    // country default (effectiveMention = mentionOverride ?? defaults?.countryMention) applies.
+    setMentionOverride(null)
   }
 
   const buildPayload = () => ({
