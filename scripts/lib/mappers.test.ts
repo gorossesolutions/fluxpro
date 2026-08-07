@@ -4,6 +4,7 @@ import {
   generateExpenseOccurrences,
   inferCountryCode,
   inferSupplyTreatment,
+  mapExpenseCategoryLabel,
   mapInvoiceLines,
   mapInvoiceStatus,
   mapRecurrence,
@@ -52,6 +53,26 @@ describe('mapInvoiceStatus', () => {
     expect(mapInvoiceStatus('en attente')).toBe('issued')
     expect(mapInvoiceStatus('en retard')).toBe('issued')
   })
+
+  it('throws on an unrecognised status rather than silently guessing', () => {
+    expect(() => mapInvoiceStatus('brouillon')).toThrow(/Unrecognised invoice status/)
+  })
+})
+
+describe('mapExpenseCategoryLabel', () => {
+  it('maps the CSV category labels used in this migration to their taxonomy keys', () => {
+    expect(mapExpenseCategoryLabel('Logiciels/Abonnements')).toBe('software_subscriptions')
+    expect(mapExpenseCategoryLabel('Marketing')).toBe('advertising')
+    expect(mapExpenseCategoryLabel('Matériel')).toBe('hardware')
+  })
+
+  it('defaults a missing category to "other"', () => {
+    expect(mapExpenseCategoryLabel(null)).toBe('other')
+  })
+
+  it('throws on an unmapped label rather than silently bucketing it into "other"', () => {
+    expect(() => mapExpenseCategoryLabel('Voyages')).toThrow(/Unrecognised expense category label/)
+  })
 })
 
 describe('mapRecurrence', () => {
@@ -60,6 +81,10 @@ describe('mapRecurrence', () => {
     expect(mapRecurrence('trimestrielle')).toBe('quarterly')
     expect(mapRecurrence('annuelle')).toBe('yearly')
     expect(mapRecurrence(null)).toBe('none')
+  })
+
+  it('throws on an unrecognised recurrence value', () => {
+    expect(() => mapRecurrence('hebdomadaire-typo')).toThrow(/Unrecognised recurrence/)
   })
 })
 

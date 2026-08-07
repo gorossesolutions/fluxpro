@@ -59,21 +59,47 @@ export function inferSupplyTreatment(countryCode: string | null): 'domestic' | '
   return countryCode === 'MU' ? 'domestic' : 'zero_rated_export'
 }
 
-export function mapInvoiceStatus(statut: 'payée' | 'en attente' | 'en retard'): MappedInvoiceStatus {
-  return statut === 'payée' ? 'paid' : 'issued'
+/** Accepts a plain string rather than a strict union — CSV exports aren't guaranteed to be
+ * as clean as a DB enum, and an unrecognised value should fail loudly, not silently coerce. */
+export function mapInvoiceStatus(statut: string): MappedInvoiceStatus {
+  const normalized = statut.trim().toLowerCase()
+  if (normalized === 'payée' || normalized === 'payee') return 'paid'
+  if (normalized === 'en attente' || normalized === 'en retard') return 'issued'
+  throw new Error(`Unrecognised invoice status: "${statut}"`)
 }
 
-export function mapRecurrence(recurrence: 'mensuelle' | 'trimestrielle' | 'annuelle' | null): MappedRecurrence {
-  switch (recurrence) {
+export function mapRecurrence(recurrence: string | null): MappedRecurrence {
+  switch (recurrence?.trim().toLowerCase()) {
     case 'mensuelle':
       return 'monthly'
     case 'trimestrielle':
       return 'quarterly'
     case 'annuelle':
       return 'yearly'
-    default:
+    case '':
+    case null:
+    case undefined:
       return 'none'
+    default:
+      throw new Error(`Unrecognised recurrence: "${recurrence}"`)
   }
+}
+
+/** Maps the French category labels used in the depenses export to the seeded
+ * expense_categories keys (spec §9). Throws on anything unmapped rather than silently
+ * bucketing into "other" — a wrong category is a wrong PCG account on the accountant export. */
+const EXPENSE_CATEGORY_LABEL_MAP: Record<string, string> = {
+  'logiciels/abonnements': 'software_subscriptions',
+  'marketing': 'advertising',
+  'matériel': 'hardware',
+  'materiel': 'hardware',
+}
+
+export function mapExpenseCategoryLabel(label: string | null): string {
+  if (!label) return 'other'
+  const key = EXPENSE_CATEGORY_LABEL_MAP[label.trim().toLowerCase()]
+  if (!key) throw new Error(`Unrecognised expense category label: "${label}" — add it to EXPENSE_CATEGORY_LABEL_MAP`)
+  return key
 }
 
 /**
