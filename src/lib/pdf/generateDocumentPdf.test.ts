@@ -85,4 +85,30 @@ describe('buildDocumentPdfDefinition', () => {
     const definition = buildDocumentPdfDefinition({ ...baseInput, documentTypeLabel: 'DEVIS', dueDate: null, validUntil: '2026-09-30' })
     expect(definition.content).toBeDefined()
   })
+
+  it('never leaves a narrow/no-break space in any text leaf (pdfmake\'s bundled font has no glyph for it — renders as a visible tofu box, e.g. "Rs 70 000,00")', () => {
+    // A large enough amount that fr-FR's Intl.NumberFormat groups thousands — that grouping
+    // separator is U+202F, not a plain space, which is exactly what broke on a real generated
+    // invoice (see FAC-2026-006).
+    const definition = buildDocumentPdfDefinition({ ...baseInput, currency: 'MUR', subtotal: 70_000, taxAmount: 0, total: 70_000 })
+
+    const badChars = /[\u00A0\u202F]/
+    const offenders: string[] = []
+    const walk = (node: unknown): void => {
+      if (typeof node === 'string') {
+        if (badChars.test(node)) offenders.push(node)
+        return
+      }
+      if (Array.isArray(node)) {
+        node.forEach(walk)
+        return
+      }
+      if (node && typeof node === 'object') {
+        Object.values(node as Record<string, unknown>).forEach(walk)
+      }
+    }
+    walk(definition.content)
+
+    expect(offenders).toEqual([])
+  })
 })

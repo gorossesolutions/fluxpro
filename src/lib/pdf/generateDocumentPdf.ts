@@ -4,6 +4,38 @@ import { formatMoney } from '@/lib/format'
 import { formatDate } from '@/lib/format'
 import { toMinorUnits } from '@/lib/money'
 
+/**
+ * `Intl.NumberFormat('fr-FR')` (used by formatMoney, and by anything a user typed after
+ * copy-pasting from a spreadsheet or Word) groups thousands with U+202F NARROW NO-BREAK SPACE,
+ * not a plain space — invisible in a browser, but pdfmake's bundled Roboto subset has no glyph
+ * for it, so it rendered as a visible tofu box ("Rs 70▯ 000,00") on a real generated PDF.
+ * Same fix for U+00A0 NO-BREAK SPACE, which shows up wherever fr-FR formatting pairs a number
+ * with a unit/currency symbol. Applied to every dynamic string that reaches pdfmake, not just
+ * money, since free-text fields (notes, legal mentions, addresses) can carry the same
+ * characters from pasted content.
+ */
+function pdfSafe(text: string): string {
+  return text.replace(/[\u00A0\u202F]/g, ' ')
+}
+
+/** Walks the whole pdfmake Content tree and applies pdfSafe to every string leaf — every
+ * `text` value, at any depth, in one pass — rather than relying on each call site below to
+ * remember to wrap its own strings, which is exactly the kind of thing that's easy to miss
+ * one of. Functions (the table `layout` callbacks) and non-string primitives pass through
+ * untouched. */
+function sanitizeDeep<T>(value: T): T {
+  if (typeof value === 'string') return pdfSafe(value) as unknown as T
+  if (Array.isArray(value)) return value.map((v) => sanitizeDeep(v)) as unknown as T
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = sanitizeDeep(v)
+    }
+    return result as T
+  }
+  return value
+}
+
 export interface PdfParty {
   name: string
   identifierLabel?: string
@@ -226,7 +258,7 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
   }
 
   return {
-    content,
+    content: sanitizeDeep(content),
     pageMargins: [40, 40, 40, 40],
     defaultStyle: { fontSize: 9, color: '#070614' },
     styles: {
