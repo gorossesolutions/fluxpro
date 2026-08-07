@@ -29,13 +29,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithPassword: AuthContextValue['signInWithPassword'] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      return { error: error?.message ?? null }
+    } catch (err) {
+      // A thrown (not returned) error means the request never completed — wrong project URL,
+      // DNS/network failure, or a CORS block. Without this catch the UI hangs silently with
+      // no visible error, which is indistinguishable from "nothing is happening."
+      return { error: `Connexion impossible : ${(err as Error).message}` }
+    }
   }
 
   const signInWithMagicLink: AuthContextValue['signInWithMagicLink'] = async (email) => {
-    const { error } = await supabase.auth.signInWithOtp({ email })
-    return { error: error?.message ?? null }
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email })
+      return { error: error?.message ?? null }
+    } catch (err) {
+      return { error: `Connexion impossible : ${(err as Error).message}` }
+    }
   }
 
   const signOut = async () => {
