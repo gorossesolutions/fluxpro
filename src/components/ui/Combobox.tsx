@@ -63,8 +63,12 @@ export function Combobox({
         <ChevronDown className="h-4 w-4 text-slate" />
       </button>
 
+      {/* open dropdown: z-40, must clear the invoice/quote editor's fixed sticky-totals bar
+          (z-20) — same z-index + later in the DOM was making that bar win the stacking tie
+          and visually cover the dropdown the instant it opened, so clicks landed on the bar
+          instead of any option underneath it. */}
       {open && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+        <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
           <input
             autoFocus
             value={query}

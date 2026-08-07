@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, Users, Archive, ArchiveRestore, FileText, FileSignature } from 'lucide-react'
+import { Plus, Users, Archive, ArchiveRestore, FileText, FileSignature, Pencil } from 'lucide-react'
 import { DataTable } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/Badge'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Card } from '@/components/ui/Card'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { useClients, useArchiveClient, useUnarchiveClient, type ClientWithFinancials } from './api'
@@ -21,6 +23,8 @@ export function ClientsListPage() {
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<ClientWithFinancials | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<ClientWithFinancials | null>(null)
 
   const { data: clients = [], isLoading, error } = useClients({ search, showArchived })
   const archiveClient = useArchiveClient()
@@ -79,33 +83,59 @@ export function ClientsListPage() {
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/factures/nouvelle?client=${row.original.id}`)}>
-              <FileText className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/devis/nouveau?client=${row.original.id}`)}>
-              <FileSignature className="h-4 w-4" />
-            </Button>
-            {row.original.archived_at ? (
-              <Button variant="ghost" size="sm" onClick={() => unarchiveClient.mutate(row.original.id)}>
-                <ArchiveRestore className="h-4 w-4" />
+            <Tooltip content="Modifier le client">
+              <Button variant="ghost" size="sm" aria-label="Modifier le client" onClick={() => setEditingClient(row.original)}>
+                <Pencil className="h-4 w-4" />
               </Button>
-            ) : (
+            </Tooltip>
+            <Tooltip content="Nouvelle facture pour ce client">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  archiveClient.mutate(row.original.id)
-                  push('success', 'Client archivé')
-                }}
+                aria-label="Nouvelle facture pour ce client"
+                onClick={() => navigate(`/factures/nouvelle?client=${row.original.id}`)}
               >
-                <Archive className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
               </Button>
+            </Tooltip>
+            <Tooltip content="Nouveau devis pour ce client">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Nouveau devis pour ce client"
+                onClick={() => navigate(`/devis/nouveau?client=${row.original.id}`)}
+              >
+                <FileSignature className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+            {row.original.archived_at ? (
+              <Tooltip content="Désarchiver le client">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Désarchiver le client"
+                  onClick={() => unarchiveClient.mutate(row.original.id)}
+                >
+                  <ArchiveRestore className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Archiver le client (réversible, aucune donnée supprimée)">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Archiver le client"
+                  onClick={() => setArchiveTarget(row.original)}
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </Tooltip>
             )}
           </div>
         ),
       },
     ],
-    [navigate, archiveClient, unarchiveClient, push],
+    [navigate, unarchiveClient],
   )
 
   return (
@@ -126,7 +156,7 @@ export function ClientsListPage() {
           className="max-w-sm"
         />
         <Button variant={showArchived ? 'primary' : 'secondary'} size="sm" onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Archivés' : 'Actifs'}
+          {showArchived ? 'Voir les clients actifs' : 'Voir les clients archivés'}
         </Button>
       </FilterBar>
 
@@ -159,6 +189,19 @@ export function ClientsListPage() {
       </Card>
 
       <ClientFormSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+      <ClientFormSheet open={editingClient !== null} onClose={() => setEditingClient(null)} client={editingClient ?? undefined} />
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={() => {
+          if (!archiveTarget) return
+          archiveClient.mutate(archiveTarget.id)
+          push('success', `« ${archiveTarget.name} » archivé — rien n'a été supprimé, retrouvable via "Voir les clients archivés"`)
+        }}
+        title="Archiver ce client ?"
+        description={`« ${archiveTarget?.name} » sera masqué de la liste active. Aucune donnée n'est supprimée — factures et devis existants restent intacts, et tu peux le désarchiver à tout moment.`}
+        confirmLabel="Archiver"
+      />
     </div>
   )
 }
