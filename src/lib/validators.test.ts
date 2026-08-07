@@ -144,6 +144,10 @@ describe('validateBrnMu', () => {
     expect(validateBrnMu('P24007518').valid).toBe(true)
   })
 
+  it('accepts a purely numeric BRN with no letter prefix (real-world variant)', () => {
+    expect(validateBrnMu('122007720').valid).toBe(true)
+  })
+
   it('rejects an unrecognised prefix', () => {
     expect(validateBrnMu('X24007518').valid).toBe(false)
   })

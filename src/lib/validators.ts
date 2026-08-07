@@ -154,12 +154,17 @@ export function validateCrnZa(value: string): ValidationResult {
   return ok()
 }
 
-/** BRN (MU): alphanumeric, first letter I (individual) / C (company) / P (partnership).
- * No public checksum exists — format check only, always advisory. */
+/** BRN (MU): the commonly-documented format is a letter prefix (I individual / C company /
+ * P partnership) followed by digits — but real BRNs issued in some periods/registries are
+ * purely numeric with no letter at all (confirmed against a real GR AdLab contact's BRN, which
+ * doesn't carry a prefix). No public checksum exists either way, so this accepts both shapes
+ * rather than false-flagging a real, valid number — format check only, always advisory. */
 export function validateBrnMu(value: string): ValidationResult {
   const cleaned = value.trim().toUpperCase()
-  if (!/^[ICP][A-Z0-9]{5,}$/.test(cleaned)) {
-    return fail('Le BRN doit commencer par I (individuel), C (société) ou P (partenariat).')
+  const prefixed = /^[ICP][A-Z0-9]{5,}$/.test(cleaned)
+  const numeric = /^\d{6,12}$/.test(cleaned)
+  if (!prefixed && !numeric) {
+    return fail('Format BRN non reconnu (attendu : préfixe I/C/P suivi de chiffres, ou un numéro).')
   }
   return ok()
 }
