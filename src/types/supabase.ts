@@ -36,6 +36,9 @@ interface Table<Row, InsertDefaults extends keyof Row = never> {
   Row: Row
   Insert: Omit<Row, InsertDefaults> & Partial<Pick<Row, InsertDefaults>>
   Update: Partial<Row>
+  // No foreign-key relationships are modelled for embedded-resource queries (select('*, foo(*)'))
+  // — every read in this app is a flat select with separate queries joined client-side.
+  Relationships: []
 }
 
 export interface Database {
@@ -225,6 +228,7 @@ export interface Database {
           acceptance_note: string | null
           converted_invoice_id: string | null
           issued_at: string | null
+          locked: boolean
           created_at: string
           updated_at: string
         },
@@ -242,6 +246,7 @@ export interface Database {
         | 'status'
         | 'supply_treatment'
         | 'payment_terms'
+        | 'locked'
         | 'created_at'
         | 'updated_at'
       >
@@ -500,6 +505,19 @@ export interface Database {
           year: number
           missing_number: number
         }
+        Relationships: []
+      }
+      v_client_financials: {
+        Row: {
+          client_id: string
+          user_id: string
+          ca_total_mur: number
+          encours_mur: number
+          has_overdue: boolean
+          invoice_count: number
+          last_invoice_date: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
