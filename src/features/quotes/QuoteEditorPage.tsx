@@ -110,7 +110,15 @@ export function QuoteEditorPage() {
     quote: {
       ...(existing ? { id: existing.id } : {}),
       client_id: client?.id ?? null,
-      client_snapshot: client ? { name: client.name, email: client.email } : {},
+      client_snapshot: client
+        ? {
+            name: client.name,
+            email: client.email,
+            address: client.address_line1,
+            identifier_label: defaults?.identifierLabel ?? client.identifier_type,
+            identifier_value: client.identifier_value,
+          }
+        : {},
       issue_date: issueDate,
       valid_until: validUntil || null,
       currency,

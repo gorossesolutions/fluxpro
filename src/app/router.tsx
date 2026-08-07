@@ -2,7 +2,6 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { RequireAuth } from './RequireAuth'
 import { MorePage } from './MorePage'
-import { ComingSoonPage } from './ComingSoonPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ClientsListPage } from '@/features/clients/ClientsListPage'
@@ -17,6 +16,7 @@ import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { DocumentsInboxPage } from '@/features/inbox/DocumentsInboxPage'
 import { RappelsPage } from '@/features/rappels/RappelsPage'
 import { FiscalitePage } from '@/features/fiscalite/FiscalitePage'
+import { ParametresPage } from '@/features/parametres/ParametresPage'
 
 export const router = createBrowserRouter([
   { path: '/connexion', element: <LoginPage /> },
@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
       { path: 'documents', element: <DocumentsInboxPage /> },
       { path: 'rappels', element: <RappelsPage /> },
       { path: 'fiscalite', element: <FiscalitePage /> },
-      { path: 'parametres', element: <ComingSoonPage title="Paramètres" /> },
+      { path: 'parametres', element: <ParametresPage /> },
       { path: 'plus', element: <MorePage /> },
     ],
   },

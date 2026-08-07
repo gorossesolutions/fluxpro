@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { useToast } from '@/components/ui/Toast'
 import { subMoney, sumMoney, toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
-import { useInvoice, useInvoicePayments, useSaveInvoiceDraft } from './api'
+import { useBusinessIdentity } from '@/features/parametres/api'
+import { useBankAccounts } from '@/features/reference/api'
+import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
+import { useInvoice, useInvoicePayments, useSaveInvoiceDraft, useCreditNotesForInvoice } from './api'
 import { InvoiceEditorPage } from './InvoiceEditorPage'
 import { PaymentModal } from './PaymentModal'
 import { CreditNoteModal } from './CreditNoteModal'
@@ -29,6 +33,9 @@ export function InvoiceDetailPage() {
   const { push } = useToast()
   const { data: invoice, isLoading } = useInvoice(id)
   const { data: payments = [] } = useInvoicePayments(id)
+  const { data: creditNotes = [] } = useCreditNotesForInvoice(id)
+  const { data: businessIdentity } = useBusinessIdentity()
+  const { data: bankAccounts = [] } = useBankAccounts()
   const saveDraft = useSaveInvoiceDraft()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [creditNoteOpen, setCreditNoteOpen] = useState(false)
@@ -86,6 +93,104 @@ export function InvoiceDetailPage() {
     }
   }
 
+  const issuerParty: PdfParty | null = businessIdentity
+    ? {
+        name: businessIdentity.name,
+        identifierLabel: businessIdentity.identifier_type,
+        identifierValue: businessIdentity.identifier_value,
+        email: businessIdentity.email,
+        phone: businessIdentity.phone,
+        addressLines: [businessIdentity.address_line1, businessIdentity.address_line2, [businessIdentity.postal_code, businessIdentity.city].filter(Boolean).join(' ')],
+      }
+    : null
+
+  const handleDownloadInvoicePdf = async () => {
+    if (!issuerParty) {
+      push('error', "Complète d'abord l'identité de l'entreprise dans Paramètres avant d'exporter un PDF.")
+      return
+    }
+    const client = invoice.client_snapshot as { name?: string; email?: string; address?: string; identifier_label?: string; identifier_value?: string }
+    const bankAccount = bankAccounts.find((a) => a.id === invoice.bank_account_id)
+    const pdfBank: PdfBankAccount | null = bankAccount
+      ? {
+          bankName: bankAccount.bank_name,
+          bankAddress: bankAccount.bank_address,
+          beneficiary: bankAccount.beneficiary,
+          accountNumber: bankAccount.account_number,
+          iban: bankAccount.iban,
+          bicSwift: bankAccount.bic_swift,
+          paypalAlias: bankAccount.paypal_alias,
+        }
+      : null
+
+    // pdfmake's bundled fonts add ~2MB to the bundle — dynamically imported so that weight
+    // only loads for someone who actually clicks "Télécharger PDF", not on every page view.
+    const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
+    downloadDocumentPdf({
+      documentTypeLabel: 'FACTURE',
+      number: invoice.number ?? 'BROUILLON',
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      issuer: issuerParty,
+      client: {
+        name: client.name ?? 'Client',
+        email: client.email,
+        addressLines: [client.address],
+        identifierLabel: client.identifier_label,
+        identifierValue: client.identifier_value,
+      },
+      lines: invoice.invoice_lines.map((l) => ({ title: l.title, description: l.description, quantity: l.quantity, unitPrice: l.unit_price, lineTotal: l.line_total })),
+      currency: invoice.currency,
+      subtotal: invoice.subtotal,
+      taxRate: invoice.tax_rate,
+      taxAmount: invoice.tax_amount,
+      total: invoice.total,
+      fxRateToMur: invoice.fx_rate_to_mur,
+      fxRateDate: invoice.fx_rate_date,
+      fxSource: invoice.fx_source,
+      countryMention: invoice.country_mention,
+      supplyTreatment: invoice.supply_treatment,
+      paymentTerms: invoice.payment_terms,
+      bankAccount: pdfBank,
+      notes: invoice.notes,
+      legalMentions: businessIdentity?.legal_mentions,
+    })
+  }
+
+  const handleDownloadCreditNotePdf = async (creditNote: (typeof creditNotes)[number]) => {
+    if (!issuerParty) {
+      push('error', "Complète d'abord l'identité de l'entreprise dans Paramètres avant d'exporter un PDF.")
+      return
+    }
+    const client = creditNote.client_snapshot as { name?: string; email?: string; address?: string; identifier_label?: string; identifier_value?: string }
+    const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
+    downloadDocumentPdf({
+      documentTypeLabel: 'AVOIR',
+      number: creditNote.number ?? 'BROUILLON',
+      issueDate: creditNote.issued_at ?? new Date().toISOString(),
+      issuer: issuerParty,
+      client: {
+        name: client.name ?? 'Client',
+        email: client.email,
+        addressLines: [client.address],
+        identifierLabel: client.identifier_label,
+        identifierValue: client.identifier_value,
+      },
+      lines: creditNote.credit_note_lines.map((l) => ({ title: l.title, description: l.description, quantity: l.quantity, unitPrice: l.unit_price, lineTotal: l.line_total })),
+      currency: creditNote.currency,
+      subtotal: creditNote.subtotal,
+      taxRate: creditNote.tax_rate,
+      taxAmount: creditNote.tax_amount,
+      total: creditNote.total,
+      fxRateToMur: creditNote.fx_rate_to_mur,
+      fxRateDate: creditNote.fx_rate_date,
+      fxSource: creditNote.fx_source,
+      reason: creditNote.reason,
+      parentDocumentNumber: invoice.number,
+      legalMentions: businessIdentity?.legal_mentions,
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -123,6 +228,10 @@ export function InvoiceDetailPage() {
           <Button variant="secondary" onClick={() => setCreditNoteOpen(true)}>
             <FileMinus className="h-4 w-4" />
             Créer un avoir
+          </Button>
+          <Button variant="secondary" onClick={handleDownloadInvoicePdf}>
+            <Download className="h-4 w-4" />
+            Télécharger PDF
           </Button>
         </div>
       </div>
@@ -208,6 +317,29 @@ export function InvoiceDetailPage() {
               </p>
             )}
           </Card>
+
+          {creditNotes.length > 0 && (
+            <Card>
+              <h2 className="mb-2 text-sm font-semibold text-slate">Avoirs</h2>
+              <ul className="flex flex-col gap-2 text-sm">
+                {creditNotes.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0">
+                    <div>
+                      <p className="text-ink">{c.number ?? 'Avoir'}</p>
+                      <p className="text-xs text-slate">
+                        <CurrencyDisplay amount={toMinorUnits(String(c.total))} currency={c.currency} /> — {c.reason}
+                      </p>
+                    </div>
+                    <Tooltip content="Télécharger l'avoir en PDF">
+                      <Button variant="ghost" size="sm" aria-label="Télécharger l'avoir en PDF" onClick={() => handleDownloadCreditNotePdf(c)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </Tooltip>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
         </div>
       </div>
 

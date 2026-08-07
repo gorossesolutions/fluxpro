@@ -10,6 +10,7 @@ export type InvoiceLine = Database['public']['Tables']['invoice_lines']['Row']
 export type InvoiceLineInsert = Database['public']['Tables']['invoice_lines']['Insert']
 export type Payment = Database['public']['Tables']['payments']['Row']
 export type CreditNote = Database['public']['Tables']['credit_notes']['Row']
+export type CreditNoteLine = Database['public']['Tables']['credit_note_lines']['Row']
 
 export interface InvoiceListFilters {
   clientId?: string
@@ -64,6 +65,43 @@ export function useInvoicePayments(invoiceId: string | undefined) {
       const { data, error } = await supabase.from('payments').select('*').eq('invoice_id', invoiceId!).order('payment_date')
       if (error) throw error
       return data
+    },
+  })
+}
+
+export interface CreditNoteWithLines extends CreditNote {
+  credit_note_lines: CreditNoteLine[]
+}
+
+export function useCreditNotesForInvoice(invoiceId: string | undefined) {
+  return useQuery({
+    queryKey: ['credit-notes', invoiceId],
+    enabled: Boolean(invoiceId),
+    queryFn: async (): Promise<CreditNoteWithLines[]> => {
+      const { data: creditNotes, error } = await supabase
+        .from('credit_notes')
+        .select('*')
+        .eq('parent_invoice_id', invoiceId!)
+        .order('issued_at', { ascending: false })
+      if (error) throw error
+      if (creditNotes.length === 0) return []
+
+      const { data: lines, error: linesError } = await supabase
+        .from('credit_note_lines')
+        .select('*')
+        .in(
+          'credit_note_id',
+          creditNotes.map((c) => c.id),
+        )
+        .order('position')
+      if (linesError) throw linesError
+
+      const linesByNote = new Map<string, CreditNoteLine[]>()
+      for (const line of lines) {
+        if (!linesByNote.has(line.credit_note_id)) linesByNote.set(line.credit_note_id, [])
+        linesByNote.get(line.credit_note_id)!.push(line)
+      }
+      return creditNotes.map((c) => ({ ...c, credit_note_lines: linesByNote.get(c.id) ?? [] }))
     },
   })
 }
@@ -312,6 +350,7 @@ export function useCreateCreditNote() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.detail(variables.parentInvoiceId) })
+      void queryClient.invalidateQueries({ queryKey: ['credit-notes', variables.parentInvoiceId] })
     },
   })
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -12,6 +12,9 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
+import { useBusinessIdentity } from '@/features/parametres/api'
+import { useBankAccounts } from '@/features/reference/api'
+import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
 import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice } from './api'
 import { QuoteEditorPage } from './QuoteEditorPage'
 
@@ -28,6 +31,8 @@ export function QuoteDetailPage() {
   const navigate = useNavigate()
   const { push } = useToast()
   const { data: quote, isLoading } = useQuote(id)
+  const { data: businessIdentity } = useBusinessIdentity()
+  const { data: bankAccounts = [] } = useBankAccounts()
   const acceptQuote = useAcceptQuote()
   const refuseQuote = useRefuseQuote()
   const convertToInvoice = useConvertQuoteToInvoice()
@@ -49,6 +54,65 @@ export function QuoteDetailPage() {
     } catch (err) {
       push('error', `Échec : ${getErrorMessage(err)}`)
     }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!businessIdentity) {
+      push('error', "Complète d'abord l'identité de l'entreprise dans Paramètres avant d'exporter un PDF.")
+      return
+    }
+    const issuerParty: PdfParty = {
+      name: businessIdentity.name,
+      identifierLabel: businessIdentity.identifier_type,
+      identifierValue: businessIdentity.identifier_value,
+      email: businessIdentity.email,
+      phone: businessIdentity.phone,
+      addressLines: [businessIdentity.address_line1, businessIdentity.address_line2, [businessIdentity.postal_code, businessIdentity.city].filter(Boolean).join(' ')],
+    }
+    const client = quote.client_snapshot as { name?: string; email?: string; address?: string; identifier_label?: string; identifier_value?: string }
+    const bankAccount = bankAccounts.find((a) => a.id === quote.bank_account_id)
+    const pdfBank: PdfBankAccount | null = bankAccount
+      ? {
+          bankName: bankAccount.bank_name,
+          bankAddress: bankAccount.bank_address,
+          beneficiary: bankAccount.beneficiary,
+          accountNumber: bankAccount.account_number,
+          iban: bankAccount.iban,
+          bicSwift: bankAccount.bic_swift,
+          paypalAlias: bankAccount.paypal_alias,
+        }
+      : null
+
+    const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
+    downloadDocumentPdf({
+      documentTypeLabel: 'DEVIS',
+      number: quote.number ?? 'BROUILLON',
+      issueDate: quote.issue_date,
+      validUntil: quote.valid_until,
+      issuer: issuerParty,
+      client: {
+        name: client.name ?? 'Client',
+        email: client.email,
+        addressLines: [client.address],
+        identifierLabel: client.identifier_label,
+        identifierValue: client.identifier_value,
+      },
+      lines: quote.quote_lines.map((l) => ({ title: l.title, description: l.description, quantity: l.quantity, unitPrice: l.unit_price, lineTotal: l.line_total })),
+      currency: quote.currency,
+      subtotal: quote.subtotal,
+      taxRate: quote.tax_rate,
+      taxAmount: quote.tax_amount,
+      total: quote.total,
+      fxRateToMur: quote.fx_rate_to_mur,
+      fxRateDate: quote.fx_rate_date,
+      fxSource: quote.fx_source,
+      countryMention: quote.country_mention,
+      supplyTreatment: quote.supply_treatment,
+      paymentTerms: quote.payment_terms,
+      bankAccount: pdfBank,
+      notes: quote.notes,
+      legalMentions: businessIdentity.legal_mentions,
+    })
   }
 
   return (
@@ -92,6 +156,10 @@ export function QuoteDetailPage() {
               Voir la facture
             </Button>
           )}
+          <Button variant="secondary" onClick={handleDownloadPdf}>
+            <Download className="h-4 w-4" />
+            Télécharger PDF
+          </Button>
         </div>
       </div>
 
