@@ -69,8 +69,12 @@ export function Combobox({
           instead of any option underneath it. */}
       {open && (
         <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+          {/* No autoFocus: on a touch device, focusing this the instant the dropdown opens
+              immediately pops the on-screen keyboard, which resizes/shifts the whole layout
+              mid-tap — touch browsers read that as a scroll gesture and cancel the tap, which
+              is very likely what made picking an option look like it "flashed and became
+              unusable." Desktop users can still just click into the field to search. */}
           <input
-            autoFocus
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)

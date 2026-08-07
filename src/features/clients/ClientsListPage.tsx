@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, Users, Archive, ArchiveRestore, FileText, FileSignature, Pencil } from 'lucide-react'
+import { Plus, Users, Archive, ArchiveRestore, FileText, FileSignature, Pencil, MoreHorizontal } from 'lucide-react'
 import { DataTable } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
@@ -12,6 +12,7 @@ import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Card } from '@/components/ui/Card'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { DropdownMenu } from '@/components/ui/DropdownMenu'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { useClients, useArchiveClient, useUnarchiveClient, type ClientWithFinancials } from './api'
@@ -82,30 +83,30 @@ export function ClientsListPage() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-1">
+          <div className="flex justify-end items-center gap-1">
+            <DropdownMenu
+              trigger={
+                <span className="flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-slate hover:bg-canvas">
+                  Créer
+                  <MoreHorizontal className="h-4 w-4" />
+                </span>
+              }
+              items={[
+                {
+                  label: 'Nouvelle facture',
+                  icon: <FileText className="h-4 w-4" />,
+                  onClick: () => navigate(`/factures/nouvelle?client=${row.original.id}`),
+                },
+                {
+                  label: 'Nouveau devis',
+                  icon: <FileSignature className="h-4 w-4" />,
+                  onClick: () => navigate(`/devis/nouveau?client=${row.original.id}`),
+                },
+              ]}
+            />
             <Tooltip content="Modifier le client">
               <Button variant="ghost" size="sm" aria-label="Modifier le client" onClick={() => setEditingClient(row.original)}>
                 <Pencil className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Nouvelle facture pour ce client">
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Nouvelle facture pour ce client"
-                onClick={() => navigate(`/factures/nouvelle?client=${row.original.id}`)}
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Nouveau devis pour ce client">
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Nouveau devis pour ce client"
-                onClick={() => navigate(`/devis/nouveau?client=${row.original.id}`)}
-              >
-                <FileSignature className="h-4 w-4" />
               </Button>
             </Tooltip>
             {row.original.archived_at ? (
