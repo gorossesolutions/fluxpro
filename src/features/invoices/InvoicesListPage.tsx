@@ -45,6 +45,20 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
           </button>
         ),
       },
+      // Redundant on a client's own "Factures" tab (embedded, clientId set) — every row is
+      // already that one client, so the column would just repeat the same name down the list.
+      ...(clientId
+        ? []
+        : [
+            {
+              id: 'client',
+              header: 'Client',
+              cell: ({ row }: { row: { original: Invoice } }) => {
+                const name = (row.original.client_snapshot as { name?: string })?.name
+                return name ?? <span className="text-slate/60">—</span>
+              },
+            } as ColumnDef<Invoice, unknown>,
+          ]),
       {
         accessorKey: 'total',
         header: 'Montant',
@@ -65,7 +79,7 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
         },
       },
     ],
-    [navigate],
+    [navigate, clientId],
   )
 
   const content = (
@@ -94,12 +108,14 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
           getRowRibbonClassName={(row) => `ribbon-${STATUS_LABELS[row.status]?.state ?? 'neutral'}`}
           renderMobileCard={(invoice) => {
             const s = STATUS_LABELS[invoice.status] ?? STATUS_LABELS.draft!
+            const clientName = (invoice.client_snapshot as { name?: string })?.name
             return (
               <Card className="cursor-pointer" onClick={() => navigate(`/factures/${invoice.id}`)}>
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-ink">{invoice.number ?? 'Brouillon'}</span>
                   <Badge state={s.state} label={s.label} />
                 </div>
+                {!clientId && clientName && <p className="mt-0.5 text-sm text-slate">{clientName}</p>}
                 <div className="mt-1 flex items-center justify-between text-sm text-slate">
                   <DateDisplay date={invoice.issue_date} />
                   <CurrencyDisplay amount={toMinorUnits(String(invoice.total))} currency={invoice.currency} />
