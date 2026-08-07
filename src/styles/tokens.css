@@ -1,0 +1,116 @@
+/**
+ * FluxPro design tokens (spec §15.1).
+ * Light mode is the default. Dark mode is a full deliberate theme, not an inversion —
+ * it must be re-declared explicitly here, not derived.
+ */
+@import 'tailwindcss';
+
+@theme {
+  /* Brand */
+  --color-navy: #0f172a;
+  --color-blue: #0067ff;
+  --color-blue-deep: #005ee9;
+  --color-blue-pale: #e7f6ff;
+  --color-slate: #364151;
+  --color-ink: #070614;
+
+  /* Neutral surfaces (light mode default) */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #d1dae5;
+
+  /* Semantic — reserved for financial document/payment state, never decorative */
+  --color-paid: #0f8a5f;
+  --color-pending: #b7791f;
+  --color-overdue: #c53030;
+  --color-neutral-doc: #64748b;
+
+  /* Type */
+  --font-sans: 'Inter Tight', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-numeric: 'Inter Tight', 'Inter', system-ui, sans-serif;
+
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-base: 1rem; /* 16 */
+  --text-lg: 1.25rem; /* 20 */
+  --text-xl: 1.5rem; /* 24 */
+  --text-2xl: 2rem; /* 32 */
+  --text-3xl: 2.5rem; /* 40 */
+
+  --leading-body: 1.5;
+  --leading-heading: 1.2;
+
+  --animate-duration-fast: 150ms;
+  --animate-duration-base: 200ms;
+}
+
+/* Dark theme: respects prefers-color-scheme by default, overridable via [data-theme] */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-canvas: #0b1220;
+    --color-surface: #101a2c;
+    --color-border: #24324a;
+    --color-slate: #cbd5e1;
+    --color-ink: #f8fafc;
+    --color-blue-pale: #0d2a44;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-canvas: #0b1220;
+  --color-surface: #101a2c;
+  --color-border: #24324a;
+  --color-slate: #cbd5e1;
+  --color-ink: #f8fafc;
+  --color-blue-pale: #0d2a44;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: var(--leading-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: var(--leading-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Money must never misalign in a ledger — this is a correctness rule, not a style choice. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-numeric);
+  }
+
+  /* Signature element: status ribbon (spec §15.1). Top edge on cards, left edge on table rows. */
+  .ribbon-top {
+    border-top: 3px solid var(--ribbon-color, var(--color-neutral-doc));
+  }
+
+  .ribbon-left {
+    border-left: 3px solid var(--ribbon-color, var(--color-neutral-doc));
+  }
+}
