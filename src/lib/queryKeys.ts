@@ -19,6 +19,19 @@ export const queryKeys = {
   bankAccounts: {
     all: ['bank-accounts'] as const,
   },
+  expenses: {
+    all: ['expenses'] as const,
+    list: (filters?: unknown) => ['expenses', 'list', filters ?? {}] as const,
+    detail: (id: string) => ['expenses', 'detail', id] as const,
+    occurrences: (id: string) => ['expenses', 'occurrences', id] as const,
+  },
+  expenseCategories: {
+    all: ['expense-categories'] as const,
+  },
+  documents: {
+    all: ['documents'] as const,
+    list: (filters?: unknown) => ['documents', 'list', filters ?? {}] as const,
+  },
   countryRules: {
     all: ['country-rules'] as const,
   },

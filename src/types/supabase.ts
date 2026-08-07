@@ -407,6 +407,7 @@ export interface Database {
           detected_date: string | null
           ocr_json: Record<string, unknown> | null
           ocr_status: string | null
+          deleted_at: string | null
           created_at: string
           updated_at: string
         },
@@ -535,6 +536,10 @@ export interface Database {
       fn_merge_clients: {
         Args: { p_keep_id: string; p_merge_id: string }
         Returns: undefined
+      }
+      fn_materialize_expense_occurrences: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
     Enums: {

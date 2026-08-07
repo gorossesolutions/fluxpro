@@ -13,6 +13,8 @@ import { InvoiceDetailPage } from '@/features/invoices/InvoiceDetailPage'
 import { QuotesListPage } from '@/features/quotes/QuotesListPage'
 import { QuoteEditorPage } from '@/features/quotes/QuoteEditorPage'
 import { QuoteDetailPage } from '@/features/quotes/QuoteDetailPage'
+import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
+import { DocumentsInboxPage } from '@/features/inbox/DocumentsInboxPage'
 
 export const router = createBrowserRouter([
   { path: '/connexion', element: <LoginPage /> },
@@ -33,8 +35,8 @@ export const router = createBrowserRouter([
       { path: 'devis', element: <QuotesListPage /> },
       { path: 'devis/nouveau', element: <QuoteEditorPage /> },
       { path: 'devis/:id', element: <QuoteDetailPage /> },
-      { path: 'depenses', element: <ComingSoonPage title="Dépenses" /> },
-      { path: 'documents', element: <ComingSoonPage title="Documents" /> },
+      { path: 'depenses', element: <ExpensesListPage /> },
+      { path: 'documents', element: <DocumentsInboxPage /> },
       { path: 'rappels', element: <ComingSoonPage title="Rappels" /> },
       { path: 'fiscalite', element: <ComingSoonPage title="Fiscalité" /> },
       { path: 'parametres', element: <ComingSoonPage title="Paramètres" /> },
