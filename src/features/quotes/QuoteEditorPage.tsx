@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Save, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -49,14 +49,19 @@ export function QuoteEditorPage() {
   const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
   const [notes, setNotes] = useState('')
 
+  // See InvoiceEditorPage's identical guard for why `client` is deliberately not a dependency
+  // here: it used to be, which made "Changer" (setClient(null)) get immediately undone by
+  // this same effect reselecting the preselected client.
+  const appliedPreselection = useRef(false)
   useEffect(() => {
-    if (preselectedClient && !client && !existing) {
+    if (preselectedClient && !existing && !appliedPreselection.current) {
+      appliedPreselection.current = true
       setClient(preselectedClient)
       setCurrency(preselectedClient.default_currency)
       if (preselectedClient.default_tax_rate != null) setTaxRate(String(preselectedClient.default_tax_rate))
       if (preselectedClient.default_bank_account_id) setBankAccountId(preselectedClient.default_bank_account_id)
     }
-  }, [preselectedClient, client, existing])
+  }, [preselectedClient, existing])
 
   useEffect(() => {
     if (!existing) return

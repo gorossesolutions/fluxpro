@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Save, Send, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -60,15 +60,21 @@ export function InvoiceEditorPage() {
   const [issueChecklist, setIssueChecklist] = useState<string[]>([])
 
   // Prefill from a preselected client (from the Clients list "Nouvelle facture" action).
+  // appliedPreselection guards this from re-firing: `client` is deliberately NOT a dependency
+  // here (it used to be, which meant clicking "Changer" — setClient(null) — made this same
+  // effect see `client` had changed and immediately reselect the preselected client right
+  // back, making the client field look permanently stuck once you arrived via a client link).
+  const appliedPreselection = useRef(false)
   useEffect(() => {
-    if (preselectedClient && !client && !existing) {
+    if (preselectedClient && !existing && !appliedPreselection.current) {
+      appliedPreselection.current = true
       setClient(preselectedClient)
       setCurrency(preselectedClient.default_currency)
       setPaymentTerms(preselectedClient.default_payment_terms)
       if (preselectedClient.default_tax_rate != null) setTaxRate(String(preselectedClient.default_tax_rate))
       if (preselectedClient.default_bank_account_id) setBankAccountId(preselectedClient.default_bank_account_id)
     }
-  }, [preselectedClient, client, existing])
+  }, [preselectedClient, existing])
 
   // Load an existing draft for editing.
   useEffect(() => {
