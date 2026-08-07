@@ -32,7 +32,7 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
 
-  const { data: invoices = [], isLoading } = useInvoices({ clientId, search, status })
+  const { data: invoices = [], isLoading, error } = useInvoices({ clientId, search, status })
 
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(
     () => [
@@ -87,6 +87,7 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
           columns={columns}
           data={invoices}
           loading={isLoading}
+          error={error}
           emptyTitle="Aucune facture pour l'instant"
           emptyDescription="Crée ta première facture."
           emptyAction={<Button onClick={() => navigate(clientId ? `/factures/nouvelle?client=${clientId}` : '/factures/nouvelle')}>Créer une facture</Button>}

@@ -31,7 +31,7 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
-  const { data: quotes = [], isLoading } = useQuotes({ clientId, search, status })
+  const { data: quotes = [], isLoading, error } = useQuotes({ clientId, search, status })
 
   const columns = useMemo<ColumnDef<Quote, unknown>[]>(
     () => [
@@ -87,6 +87,7 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
           columns={columns}
           data={quotes}
           loading={isLoading}
+          error={error}
           emptyTitle="Aucun devis pour l'instant"
           emptyDescription="Crée ton premier devis."
           emptyAction={<Button onClick={() => navigate(clientId ? `/devis/nouveau?client=${clientId}` : '/devis/nouveau')}>Créer un devis</Button>}

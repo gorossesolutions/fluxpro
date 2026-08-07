@@ -8,7 +8,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { EmptyState } from './EmptyState'
 import { Skeleton } from './Skeleton'
@@ -17,6 +17,11 @@ interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[]
   data: T[]
   loading?: boolean
+  /** A query error, if any. Rendered as a visible error state — a failed fetch must never be
+   * indistinguishable from "no data yet" (this exact confusion cost real debugging time once
+   * already: a missing migration made a list query fail, and with no error surfaced it looked
+   * like newly-created rows were silently vanishing). */
+  error?: unknown
   emptyTitle: string
   emptyDescription?: string
   emptyAction?: ReactNode
@@ -34,6 +39,7 @@ export function DataTable<T>({
   columns,
   data,
   loading,
+  error,
   emptyTitle,
   emptyDescription,
   emptyAction,
@@ -58,6 +64,16 @@ export function DataTable<T>({
           <Skeleton key={i} className="h-14 w-full" />
         ))}
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger les données"
+        description={error instanceof Error ? error.message : String(error)}
+      />
     )
   }
 

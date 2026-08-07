@@ -22,7 +22,7 @@ export function ClientsListPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const { data: clients = [], isLoading } = useClients({ search, showArchived })
+  const { data: clients = [], isLoading, error } = useClients({ search, showArchived })
   const archiveClient = useArchiveClient()
   const unarchiveClient = useUnarchiveClient()
 
@@ -135,6 +135,7 @@ export function ClientsListPage() {
           columns={columns}
           data={clients}
           loading={isLoading}
+          error={error}
           emptyTitle="Aucun client pour l'instant"
           emptyDescription="Crée ton premier client, ou laisse-le se créer automatiquement depuis une facture."
           emptyAction={<Button onClick={() => setCreateOpen(true)}>Créer un client</Button>}
