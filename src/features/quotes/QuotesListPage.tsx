@@ -44,6 +44,20 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
           </button>
         ),
       },
+      // Redundant on a client's own "Devis" tab (embedded, clientId set) — every row is
+      // already that one client, so the column would just repeat the same name down the list.
+      ...(clientId
+        ? []
+        : [
+            {
+              id: 'client',
+              header: 'Client',
+              cell: ({ row }: { row: { original: Quote } }) => {
+                const name = (row.original.client_snapshot as { name?: string })?.name
+                return name ?? <span className="text-slate/60">—</span>
+              },
+            } as ColumnDef<Quote, unknown>,
+          ]),
       {
         accessorKey: 'total',
         header: 'Montant',
@@ -65,7 +79,7 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
         },
       },
     ],
-    [navigate],
+    [navigate, clientId],
   )
 
   const content = (
@@ -94,12 +108,14 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
           getRowRibbonClassName={(row) => `ribbon-${STATUS_LABELS[row.status]?.state ?? 'neutral'}`}
           renderMobileCard={(quote) => {
             const s = STATUS_LABELS[quote.status] ?? STATUS_LABELS.draft!
+            const clientName = (quote.client_snapshot as { name?: string })?.name
             return (
               <Card className="cursor-pointer" onClick={() => navigate(`/devis/${quote.id}`)}>
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-ink">{quote.number ?? 'Brouillon'}</span>
                   <Badge state={s.state} label={s.label} />
                 </div>
+                {!clientId && clientName && <p className="mt-0.5 text-sm text-slate">{clientName}</p>}
                 <div className="mt-1 flex items-center justify-between text-sm text-slate">
                   <DateDisplay date={quote.issue_date} />
                   <CurrencyDisplay amount={toMinorUnits(String(quote.total))} currency={quote.currency} />
