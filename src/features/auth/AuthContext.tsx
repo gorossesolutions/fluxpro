@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/errors'
 
 interface AuthContextValue {
   session: Session | null
@@ -36,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // A thrown (not returned) error means the request never completed — wrong project URL,
       // DNS/network failure, or a CORS block. Without this catch the UI hangs silently with
       // no visible error, which is indistinguishable from "nothing is happening."
-      return { error: `Connexion impossible : ${(err as Error).message}` }
+      return { error: `Connexion impossible : ${getErrorMessage(err)}` }
     }
   }
 
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithOtp({ email })
       return { error: error?.message ?? null }
     } catch (err) {
-      return { error: `Connexion impossible : ${(err as Error).message}` }
+      return { error: `Connexion impossible : ${getErrorMessage(err)}` }
     }
   }
 

@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table'
 import { ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { getErrorMessage } from '@/lib/errors'
 import { EmptyState } from './EmptyState'
 import { Skeleton } from './Skeleton'
 
@@ -72,7 +73,7 @@ export function DataTable<T>({
       <EmptyState
         icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
         title="Impossible de charger les données"
-        description={error instanceof Error ? error.message : String(error)}
+        description={getErrorMessage(error)}
       />
     )
   }

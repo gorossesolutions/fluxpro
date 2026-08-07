@@ -15,6 +15,7 @@ import { useBankAccounts, resolveCountryDefaults, useCountryRules, resolveFxRate
 import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
 import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useInvoice, useIssueInvoice, useSaveInvoiceDraft } from './api'
 
 const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
@@ -166,7 +167,7 @@ export function InvoiceEditorPage() {
       push('success', 'Facture enregistrée comme brouillon')
       if (!existing) navigate(`/factures/${saved.id}`, { replace: true })
     } catch (err) {
-      push('error', `Échec de l'enregistrement : ${(err as Error).message}`)
+      push('error', `Échec de l'enregistrement : ${getErrorMessage(err)}`)
     }
   }
 
@@ -199,7 +200,7 @@ export function InvoiceEditorPage() {
       push('success', 'Facture émise')
       navigate(`/factures/${saved.id}`, { replace: true })
     } catch (err) {
-      push('error', `Échec de l'émission : ${(err as Error).message}`)
+      push('error', `Échec de l'émission : ${getErrorMessage(err)}`)
     }
   }
 

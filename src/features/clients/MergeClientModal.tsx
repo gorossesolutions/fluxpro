@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Combobox } from '@/components/ui/Combobox'
 import { useToast } from '@/components/ui/Toast'
+import { getErrorMessage } from '@/lib/errors'
 import { useClientSearch, useMergeClients, type Client } from './api'
 
 interface MergeClientModalProps {
@@ -34,7 +35,7 @@ export function MergeClientModal({ open, onClose, currentClient, onMerged }: Mer
       onMerged()
       onClose()
     } catch (err) {
-      push('error', `Échec de la fusion : ${(err as Error).message}`)
+      push('error', `Échec de la fusion : ${getErrorMessage(err)}`)
     }
   }
 

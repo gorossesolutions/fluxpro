@@ -15,6 +15,7 @@ import { useBankAccounts, resolveCountryDefaults, useCountryRules } from '@/feat
 import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
 import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useQuote, useSaveQuoteDraft, useIssueQuote } from './api'
 
 const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
@@ -138,7 +139,7 @@ export function QuoteEditorPage() {
       push('success', 'Devis enregistré comme brouillon')
       if (!existing) navigate(`/devis/${saved.id}`, { replace: true })
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 
@@ -154,7 +155,7 @@ export function QuoteEditorPage() {
       push('success', 'Devis envoyé')
       navigate(`/devis/${saved.id}`, { replace: true })
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

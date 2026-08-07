@@ -6,6 +6,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { fromMinorUnits } from '@/lib/money'
+import { getErrorMessage } from '@/lib/errors'
 import { useRecordPayment, type Invoice } from './api'
 
 interface PaymentModalProps {
@@ -39,7 +40,7 @@ export function PaymentModal({ open, onClose, invoice, outstandingMinor }: Payme
       push('success', 'Paiement enregistré')
       onClose()
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

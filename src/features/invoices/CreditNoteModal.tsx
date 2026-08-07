@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import { LineItemsEditor, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
 import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useCreateCreditNote, type InvoiceWithLines } from './api'
 
 interface CreditNoteModalProps {
@@ -60,7 +61,7 @@ export function CreditNoteModal({ open, onClose, invoice }: CreditNoteModalProps
       push('success', 'Avoir créé')
       onClose()
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

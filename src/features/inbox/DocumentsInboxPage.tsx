@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
+import { getErrorMessage } from '@/lib/errors'
 import {
   useDocuments,
   useUnmatchedDocumentCount,
@@ -43,7 +44,7 @@ export function DocumentsInboxPage() {
       await uploadDocuments.mutateAsync(files)
       push('success', files.length > 1 ? `${files.length} justificatifs déposés` : 'Justificatif déposé')
     } catch (err) {
-      push('error', `Échec du dépôt : ${(err as Error).message}`)
+      push('error', `Échec du dépôt : ${getErrorMessage(err)}`)
     }
   }
 
@@ -52,7 +53,7 @@ export function DocumentsInboxPage() {
       const url = await getDocumentSignedUrl(doc.storage_path)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
-      push('error', `Impossible d'ouvrir le fichier : ${(err as Error).message}`)
+      push('error', `Impossible d'ouvrir le fichier : ${getErrorMessage(err)}`)
     }
   }
 

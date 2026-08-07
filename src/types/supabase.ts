@@ -31,6 +31,7 @@ export type InboxDocumentStatus = 'unmatched' | 'matched'
 export type MatchedEntityType = 'invoice' | 'expense'
 export type DocumentNumberPrefix = 'FAC' | 'DEV' | 'AV'
 export type EbsTransactionType = 'TC01' | 'TC02' | 'TC03' | 'TC04' | 'TC05' | 'TC06'
+export type DunningStage = 'j1' | 'j7' | 'j15' | 'j30'
 
 // A column with no NOT NULL constraint is always optional on Insert (omitting it just leaves
 // it NULL) — independent of whether it also has a SQL DEFAULT. InsertDefaults below is only
@@ -502,6 +503,10 @@ export interface Database {
       migration_map: Table<
         { id: string; legacy_id: string; new_id: string; entity: string; created_at: string },
         'id' | 'created_at'
+      >
+      dunning_reminders: Table<
+        { id: string; user_id: string; invoice_id: string; stage: DunningStage; sent_at: string },
+        'id' | 'sent_at'
       >
     }
     Views: {

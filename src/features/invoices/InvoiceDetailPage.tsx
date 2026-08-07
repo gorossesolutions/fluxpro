@@ -9,6 +9,7 @@ import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { useToast } from '@/components/ui/Toast'
 import { subMoney, sumMoney, toMinorUnits } from '@/lib/money'
+import { getErrorMessage } from '@/lib/errors'
 import { useInvoice, useInvoicePayments, useSaveInvoiceDraft } from './api'
 import { InvoiceEditorPage } from './InvoiceEditorPage'
 import { PaymentModal } from './PaymentModal'
@@ -81,7 +82,7 @@ export function InvoiceDetailPage() {
       push('success', 'Facture dupliquée en brouillon')
       navigate(`/factures/${saved.id}`)
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

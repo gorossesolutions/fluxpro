@@ -1,6 +1,7 @@
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { getErrorMessage } from '@/lib/errors'
 import { useCreateClient, useUpdateClient, type Client } from './api'
 import { ClientForm } from './ClientForm'
 import type { ClientFormValues } from './schema'
@@ -30,7 +31,7 @@ export function ClientFormSheet({ open, onClose, client, onSaved }: ClientFormSh
       onSaved?.(saved)
       onClose()
     } catch (err) {
-      push('error', `Échec de l'enregistrement : ${(err as Error).message}`)
+      push('error', `Échec de l'enregistrement : ${getErrorMessage(err)}`)
     }
   }
 

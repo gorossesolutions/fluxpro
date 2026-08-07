@@ -2,6 +2,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { resolveFxRate } from '@/features/reference/api'
+import { getErrorMessage } from '@/lib/errors'
 import { useCreateExpense, useUpdateExpense, useMaterializeExpenseOccurrences, type ExpenseWithCategory } from './api'
 import { ExpenseForm } from './ExpenseForm'
 import type { ExpenseFormValues } from './schema'
@@ -59,7 +60,7 @@ export function ExpenseFormSheet({ open, onClose, expense }: ExpenseFormSheetPro
       push('success', expense ? 'Dépense mise à jour' : 'Dépense enregistrée')
       onClose()
     } catch (err) {
-      push('error', `Échec de l'enregistrement : ${(err as Error).message}`)
+      push('error', `Échec de l'enregistrement : ${getErrorMessage(err)}`)
     }
   }
 

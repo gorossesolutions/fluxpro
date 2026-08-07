@@ -8,6 +8,7 @@ import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
+import { getErrorMessage } from '@/lib/errors'
 import { useUpdateDocumentDetails, useConfirmMatch, useMatchCandidates, type InboxDocument } from './api'
 
 interface DocumentMatchModalProps {
@@ -46,7 +47,7 @@ export function DocumentMatchModal({ document, onClose }: DocumentMatchModalProp
       })
       push('success', 'Détails enregistrés')
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 
@@ -56,7 +57,7 @@ export function DocumentMatchModal({ document, onClose }: DocumentMatchModalProp
       push('success', 'Document rapproché')
       onClose()
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

@@ -25,6 +25,14 @@
   --color-overdue: #c53030;
   --color-neutral-doc: #64748b;
 
+  /* Chart categorical series (spec §5) — reserved for magnitude/identity in charts only,
+   * never for document/payment state (that's the semantic set above). Slot 1 is brand blue
+   * (already used everywhere else); slot 2 is picked from the dataviz skill's validated
+   * 8-hue default and checked against slot 1 with scripts/validate_palette.js — passes
+   * CVD separation and normal-vision floor in both light and dark. */
+  --color-chart-1: #0067ff;
+  --color-chart-2: #eb6834;
+
   /* Type */
   --font-sans: 'Inter Tight', 'Inter', system-ui, -apple-system, sans-serif;
   --font-numeric: 'Inter Tight', 'Inter', system-ui, sans-serif;
@@ -53,6 +61,7 @@
     --color-slate: #cbd5e1;
     --color-ink: #f8fafc;
     --color-blue-pale: #0d2a44;
+    --color-chart-2: #d95926;
   }
 }
 
@@ -63,6 +72,7 @@
   --color-slate: #cbd5e1;
   --color-ink: #f8fafc;
   --color-blue-pale: #0d2a44;
+  --color-chart-2: #d95926;
 }
 
 @layer base {

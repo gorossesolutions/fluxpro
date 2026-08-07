@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { useCountryRules, resolveCountryDefaults } from '@/features/reference/api'
+import { getErrorMessage } from '@/lib/errors'
 import { useCreateClient, type Client } from './api'
 import { clientQuickCreateSchema, type ClientQuickCreateValues } from './schema'
 
@@ -49,7 +50,7 @@ export function ClientQuickCreateModal({ open, onClose, initialName, onCreated }
       reset()
       onCreated(client)
     } catch (err) {
-      push('error', `Échec de la création : ${(err as Error).message}`)
+      push('error', `Échec de la création : ${getErrorMessage(err)}`)
     }
   }
 

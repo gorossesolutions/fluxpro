@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
+import { getErrorMessage } from '@/lib/errors'
 import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice } from './api'
 import { QuoteEditorPage } from './QuoteEditorPage'
 
@@ -46,7 +47,7 @@ export function QuoteDetailPage() {
       push('success', 'Devis converti en facture (brouillon)')
       navigate(`/factures/${invoiceId}`)
     } catch (err) {
-      push('error', `Échec : ${(err as Error).message}`)
+      push('error', `Échec : ${getErrorMessage(err)}`)
     }
   }
 

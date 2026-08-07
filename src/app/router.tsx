@@ -15,6 +15,8 @@ import { QuoteEditorPage } from '@/features/quotes/QuoteEditorPage'
 import { QuoteDetailPage } from '@/features/quotes/QuoteDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { DocumentsInboxPage } from '@/features/inbox/DocumentsInboxPage'
+import { RappelsPage } from '@/features/rappels/RappelsPage'
+import { FiscalitePage } from '@/features/fiscalite/FiscalitePage'
 
 export const router = createBrowserRouter([
   { path: '/connexion', element: <LoginPage /> },
@@ -37,8 +39,8 @@ export const router = createBrowserRouter([
       { path: 'devis/:id', element: <QuoteDetailPage /> },
       { path: 'depenses', element: <ExpensesListPage /> },
       { path: 'documents', element: <DocumentsInboxPage /> },
-      { path: 'rappels', element: <ComingSoonPage title="Rappels" /> },
-      { path: 'fiscalite', element: <ComingSoonPage title="Fiscalité" /> },
+      { path: 'rappels', element: <RappelsPage /> },
+      { path: 'fiscalite', element: <FiscalitePage /> },
       { path: 'parametres', element: <ComingSoonPage title="Paramètres" /> },
       { path: 'plus', element: <MorePage /> },
     ],
