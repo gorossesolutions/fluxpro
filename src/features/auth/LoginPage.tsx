@@ -1,17 +1,26 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
-  const { signInWithPassword, signInWithMagicLink } = useAuth()
+  const { session, signInWithPassword, signInWithMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'password' | 'magic-link'>('password')
   const [error, setError] = useState<string | null>(null)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  // RequireAuth only guards the other direction (redirects an unauthenticated visitor *to*
+  // /connexion) — nothing previously sent a freshly-authenticated visitor *away* from it. A
+  // successful signInWithPassword sets the session via onAuthStateChange same as ever, but
+  // with no redirect here the app just sat on this page: no error (login genuinely succeeded),
+  // no navigation (nothing was watching for that). Wrong credentials looked fine because that
+  // path does show an error — only the success path was silent.
+  if (session) return <Navigate to="/" replace />
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
