@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Archive, ArchiveRestore, FolderOpen, Link2, Link2Off, ExternalLink } from 'lucide-react'
+import { Archive, ArchiveRestore, FolderOpen, Link2, Link2Off, Eye, Trash2 } from 'lucide-react'
 import { FileDropzone } from '@/components/ui/FileDropzone'
 import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
@@ -19,23 +19,27 @@ import {
   useArchiveDocument,
   useRestoreDocument,
   useUnmatchDocument,
-  getDocumentSignedUrl,
+  useDeleteDocument,
   type InboxDocument,
 } from './api'
 import { DocumentMatchModal } from './DocumentMatchModal'
+import { DocumentPreviewModal } from './DocumentPreviewModal'
 
 export function DocumentsInboxPage() {
   const { push } = useToast()
   const [activeTab, setActiveTab] = useState<'unmatched' | 'matched'>('unmatched')
   const [showArchived, setShowArchived] = useState(false)
   const [matchingDoc, setMatchingDoc] = useState<InboxDocument | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<InboxDocument | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<InboxDocument | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<InboxDocument | null>(null)
 
   const { data: documents = [], isLoading } = useDocuments({ status: showArchived ? 'all' : activeTab, showArchived })
   const uploadDocuments = useUploadDocuments()
   const archiveDocument = useArchiveDocument()
   const restoreDocument = useRestoreDocument()
   const unmatchDocument = useUnmatchDocument()
+  const deleteDocument = useDeleteDocument()
 
   const { data: unmatchedCount = 0 } = useUnmatchedDocumentCount()
 
@@ -45,15 +49,6 @@ export function DocumentsInboxPage() {
       push('success', files.length > 1 ? `${files.length} justificatifs déposés` : 'Justificatif déposé')
     } catch (err) {
       push('error', `Échec du dépôt : ${getErrorMessage(err)}`)
-    }
-  }
-
-  const handlePreview = async (doc: InboxDocument) => {
-    try {
-      const url = await getDocumentSignedUrl(doc.storage_path)
-      window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (err) {
-      push('error', `Impossible d'ouvrir le fichier : ${getErrorMessage(err)}`)
     }
   }
 
@@ -97,11 +92,11 @@ export function DocumentsInboxPage() {
             <Card key={doc.id} className="flex flex-col gap-2">
               <div className="flex items-start justify-between gap-2">
                 <button
-                  onClick={() => void handlePreview(doc)}
+                  onClick={() => setPreviewDoc(doc)}
                   className="flex items-center gap-1.5 text-left text-sm font-medium text-ink hover:text-blue"
                 >
                   <span className="line-clamp-2 break-all">{doc.file_name}</span>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate" />
+                  <Eye className="h-3.5 w-3.5 shrink-0 text-slate" />
                 </button>
                 <Badge state={doc.status === 'matched' ? 'paid' : 'pending'} label={doc.status === 'matched' ? 'Rapproché' : 'À classer'} />
               </div>
@@ -149,6 +144,11 @@ export function DocumentsInboxPage() {
                     </Tooltip>
                   </>
                 )}
+                <Tooltip content="Supprimer définitivement">
+                  <Button variant="ghost" size="sm" aria-label="Supprimer définitivement" onClick={() => setDeleteTarget(doc)}>
+                    <Trash2 className="h-4 w-4 text-overdue" />
+                  </Button>
+                </Tooltip>
               </div>
             </Card>
           ))}
@@ -156,6 +156,7 @@ export function DocumentsInboxPage() {
       )}
 
       <DocumentMatchModal document={matchingDoc} onClose={() => setMatchingDoc(null)} />
+      <DocumentPreviewModal document={previewDoc} onClose={() => setPreviewDoc(null)} />
       <ConfirmDialog
         open={archiveTarget !== null}
         onClose={() => setArchiveTarget(null)}
@@ -167,6 +168,19 @@ export function DocumentsInboxPage() {
         title="Archiver ce document ?"
         description="Il sera masqué de la liste active. Aucune donnée n'est supprimée, et tu peux le restaurer à tout moment."
         confirmLabel="Archiver"
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          deleteDocument.mutate(deleteTarget)
+          push('success', `« ${deleteTarget.file_name} » supprimé définitivement`)
+        }}
+        title="Supprimer ce document définitivement ?"
+        description="Le fichier et sa fiche seront supprimés sans possibilité de récupération — utile pour un dépôt fait par erreur ou un document sans rapport. Pour un document valide que tu veux juste ranger, préfère « Archiver »."
+        confirmLabel="Supprimer définitivement"
+        danger
       />
     </div>
   )

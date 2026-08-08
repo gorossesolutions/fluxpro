@@ -210,6 +210,23 @@ export function useRestoreDocument() {
   })
 }
 
+/** Hard delete, unlike archive (deleted_at) — for the genuinely irrelevant/wrong upload, not
+ * something anyone will want back. Removes the storage object first (best-effort: a storage
+ * failure shouldn't block clearing the row if the file is already gone) then the row itself. */
+export function useDeleteDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (doc: Pick<InboxDocument, 'id' | 'storage_path'>): Promise<void> => {
+      await supabase.storage.from('documents').remove([doc.storage_path])
+      const { error } = await supabase.from('documents').delete().eq('id', doc.id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.documents.all })
+    },
+  })
+}
+
 export interface MatchCandidate {
   entityType: MatchedEntityType
   entityId: string

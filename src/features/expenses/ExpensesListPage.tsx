@@ -176,6 +176,23 @@ export function ExpensesListPage() {
                   </span>
                 )}
               </div>
+              <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setEditingExpense(exp)}>
+                  <Pencil className="h-4 w-4" />
+                  Modifier
+                </Button>
+                {exp.deleted_at ? (
+                  <Button variant="ghost" size="sm" onClick={() => restoreExpense.mutate(exp.id)}>
+                    <ArchiveRestore className="h-4 w-4" />
+                    Restaurer
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setArchiveTarget(exp)}>
+                    <Archive className="h-4 w-4" />
+                    Archiver
+                  </Button>
+                )}
+              </div>
             </Card>
           )}
         />
