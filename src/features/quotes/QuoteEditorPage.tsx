@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Send } from 'lucide-react'
+import { Save, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
 import { useClient, type Client } from '@/features/clients/api'
@@ -17,7 +18,7 @@ import { useBusinessIdentity } from '@/features/parametres/api'
 import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
-import { useQuote, useSaveQuoteDraft, useIssueQuote } from './api'
+import { useQuote, useSaveQuoteDraft, useIssueQuote, useDeleteQuote } from './api'
 
 const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
 
@@ -43,6 +44,8 @@ export function QuoteEditorPage() {
   const vatRegistered = businessIdentity?.vat_registered ?? false
   const saveDraft = useSaveQuoteDraft()
   const issueQuote = useIssueQuote()
+  const deleteQuote = useDeleteQuote()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [client, setClient] = useState<Client | null>(null)
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10))
@@ -174,10 +177,18 @@ export function QuoteEditorPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <h1 className="text-xl font-semibold text-ink">
-        {existing?.number ?? 'Nouveau devis'}
-        {isLocked && <span className="ml-2 text-sm font-normal text-slate">(envoyé — verrouillé)</span>}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold text-ink">
+          {existing?.number ?? 'Nouveau devis'}
+          {isLocked && <span className="ml-2 text-sm font-normal text-slate">(envoyé — verrouillé)</span>}
+        </h1>
+        {existing && (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4 text-overdue" />
+            Supprimer le devis
+          </Button>
+        )}
+      </div>
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-slate">Client</h2>
@@ -270,6 +281,25 @@ export function QuoteEditorPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={async () => {
+          if (!existing) return
+          try {
+            await deleteQuote.mutateAsync(existing.id)
+            push('success', 'Brouillon supprimé')
+            navigate('/devis')
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Supprimer ce brouillon ?"
+        description="Ce brouillon de devis sera supprimé définitivement. Aucun numéro n'a encore été attribué, donc rien d'autre n'est affecté."
+        confirmLabel="Supprimer"
+        danger
+      />
     </div>
   )
 }

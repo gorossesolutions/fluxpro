@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -10,13 +10,21 @@ import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Textarea } from '@/components/ui/Textarea'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useBusinessIdentity, getLogoDataUrl } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
-import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice, useUpdateQuoteMutableFields } from './api'
+import {
+  useQuote,
+  useAcceptQuote,
+  useRefuseQuote,
+  useConvertQuoteToInvoice,
+  useUpdateQuoteMutableFields,
+  useDeleteQuote,
+} from './api'
 import { QuoteEditorPage } from './QuoteEditorPage'
 
 const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
@@ -38,11 +46,13 @@ export function QuoteDetailPage() {
   const refuseQuote = useRefuseQuote()
   const convertToInvoice = useConvertQuoteToInvoice()
   const updateMutableFields = useUpdateQuoteMutableFields()
+  const deleteQuote = useDeleteQuote()
   const [acceptOpen, setAcceptOpen] = useState(false)
   const [acceptanceNote, setAcceptanceNote] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [editValidUntil, setEditValidUntil] = useState('')
   const [editNotes, setEditNotes] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (isLoading || !quote) return <Skeleton className="h-96 w-full" />
 
@@ -201,6 +211,10 @@ export function QuoteDetailPage() {
             <Download className="h-4 w-4" />
             Télécharger PDF
           </Button>
+          <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4 text-overdue" />
+            Supprimer
+          </Button>
         </div>
       </div>
 
@@ -341,6 +355,28 @@ export function QuoteDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={async () => {
+          try {
+            await deleteQuote.mutateAsync(quote.id)
+            push('success', 'Devis supprimé')
+            navigate('/devis')
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Supprimer ce devis définitivement ?"
+        description={
+          quote.converted_invoice_id
+            ? "Contrairement à une facture, un devis n'est pas un document fiscal figé et peut être supprimé — la facture déjà créée à partir de ce devis restera intacte, elle perdra simplement sa référence vers ce devis."
+            : "Contrairement à une facture, un devis n'est pas un document fiscal figé et peut être supprimé sans laisser de trace obligatoire. Cette action est définitive."
+        }
+        confirmLabel="Supprimer définitivement"
+        danger
+      />
     </div>
   )
 }

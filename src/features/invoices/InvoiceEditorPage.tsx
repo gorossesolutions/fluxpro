@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Send, AlertTriangle } from 'lucide-react'
+import { Save, Send, AlertTriangle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
 import { useClient, type Client } from '@/features/clients/api'
@@ -17,7 +18,7 @@ import { useBusinessIdentity } from '@/features/parametres/api'
 import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
-import { useInvoice, useIssueInvoice, useSaveInvoiceDraft } from './api'
+import { useInvoice, useIssueInvoice, useSaveInvoiceDraft, useDeleteInvoiceDraft } from './api'
 
 const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
 const PAYMENT_TERMS_PRESETS = [
@@ -49,6 +50,8 @@ export function InvoiceEditorPage() {
   const vatRegistered = businessIdentity?.vat_registered ?? false
   const saveDraft = useSaveInvoiceDraft()
   const issueInvoice = useIssueInvoice()
+  const deleteDraft = useDeleteInvoiceDraft()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [client, setClient] = useState<Client | null>(null)
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10))
@@ -221,11 +224,17 @@ export function InvoiceEditorPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-24">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-ink">
           {existing?.number ?? 'Nouvelle facture'}
           {isLocked && <span className="ml-2 text-sm font-normal text-slate">(émise — verrouillée)</span>}
         </h1>
+        {existing && (
+          <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4 text-overdue" />
+            Supprimer le brouillon
+          </Button>
+        )}
       </div>
 
       {issueChecklist.length > 0 && (
@@ -394,6 +403,25 @@ export function InvoiceEditorPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={async () => {
+          if (!existing) return
+          try {
+            await deleteDraft.mutateAsync(existing.id)
+            push('success', 'Brouillon supprimé')
+            navigate('/factures')
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Supprimer ce brouillon ?"
+        description="Ce brouillon de facture sera supprimé définitivement. Aucun numéro n'a encore été attribué, donc rien d'autre n'est affecté."
+        confirmLabel="Supprimer"
+        danger
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Archive, ArchiveRestore, FolderOpen, Link2, Link2Off, Eye, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, FolderOpen, Link2, Link2Off, Eye, Trash2, AlertTriangle } from 'lucide-react'
 import { FileDropzone } from '@/components/ui/FileDropzone'
 import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
@@ -34,7 +34,7 @@ export function DocumentsInboxPage() {
   const [archiveTarget, setArchiveTarget] = useState<InboxDocument | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<InboxDocument | null>(null)
 
-  const { data: documents = [], isLoading } = useDocuments({ status: showArchived ? 'all' : activeTab, showArchived })
+  const { data: documents = [], isLoading, error } = useDocuments({ status: showArchived ? 'all' : activeTab, showArchived })
   const uploadDocuments = useUploadDocuments()
   const archiveDocument = useArchiveDocument()
   const restoreDocument = useRestoreDocument()
@@ -80,6 +80,12 @@ export function DocumentsInboxPage() {
             <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <EmptyState
+          icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+          title="Impossible de charger les documents"
+          description={getErrorMessage(error)}
+        />
       ) : documents.length === 0 ? (
         <EmptyState
           icon={<FolderOpen className="h-8 w-8" />}

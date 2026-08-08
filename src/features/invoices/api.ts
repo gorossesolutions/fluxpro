@@ -287,6 +287,26 @@ export function useUpdateInvoiceMutableFields() {
   })
 }
 
+/** Sets status to 'cancelled' — the one status transition still allowed on a locked invoice
+ * (status is explicitly whitelisted alongside due_date/notes in fn_guard_invoice_immutability,
+ * 0003_functions.sql). An issued invoice can never be deleted or have its financial fields
+ * changed (issue a credit note instead) — cancelling is the closest thing to "undo" that stays
+ * within that constraint, for e.g. an invoice raised by mistake that a client never paid. */
+export function useCancelInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<Invoice> => {
+      const { data, error } = await supabase.from('invoices').update({ status: 'cancelled' }).eq('id', id).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.detail(id) })
+    },
+  })
+}
+
 export function useDeleteInvoiceDraft() {
   const queryClient = useQueryClient()
   return useMutation({

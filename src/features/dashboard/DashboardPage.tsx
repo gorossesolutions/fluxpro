@@ -64,6 +64,11 @@ export function DashboardPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-ink">Vue d'ensemble</h1>
 
+      <Card className="border-blue/30 bg-blue-pale">
+        <p className="text-sm font-medium text-blue">CA total</p>
+        <p className="tabular-nums mt-1 text-3xl font-bold text-ink">{formatMoney(kpis.totalCaMur, 'MUR')}</p>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="CA encaissé ce mois" value={formatMoney(kpis.collectedThisMonthMur, 'MUR')} state="paid" />
         <KpiCard label="En attente" value={formatMoney(kpis.pendingMur, 'MUR')} state="pending" />

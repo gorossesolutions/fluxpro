@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download, Pencil } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download, Pencil, Ban } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -11,13 +11,21 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Textarea } from '@/components/ui/Textarea'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { subMoney, sumMoney, toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useBusinessIdentity, getLogoDataUrl } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
-import { useInvoice, useInvoicePayments, useSaveInvoiceDraft, useUpdateInvoiceMutableFields, useCreditNotesForInvoice } from './api'
+import {
+  useInvoice,
+  useInvoicePayments,
+  useSaveInvoiceDraft,
+  useUpdateInvoiceMutableFields,
+  useCancelInvoice,
+  useCreditNotesForInvoice,
+} from './api'
 import { InvoiceEditorPage } from './InvoiceEditorPage'
 import { PaymentModal } from './PaymentModal'
 import { CreditNoteModal } from './CreditNoteModal'
@@ -41,11 +49,13 @@ export function InvoiceDetailPage() {
   const { data: bankAccounts = [] } = useBankAccounts()
   const saveDraft = useSaveInvoiceDraft()
   const updateMutableFields = useUpdateInvoiceMutableFields()
+  const cancelInvoice = useCancelInvoice()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [creditNoteOpen, setCreditNoteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editDueDate, setEditDueDate] = useState('')
   const [editNotes, setEditNotes] = useState('')
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   if (isLoading || !invoice) {
     return <Skeleton className="h-96 w-full" />
@@ -261,6 +271,10 @@ export function InvoiceDetailPage() {
                 <CreditCard className="h-4 w-4" />
                 Paiement partiel
               </Button>
+              <Button variant="secondary" onClick={() => setCancelOpen(true)}>
+                <Ban className="h-4 w-4" />
+                Annuler
+              </Button>
             </>
           )}
           <Button variant="secondary" onClick={handleOpenEdit}>
@@ -450,6 +464,23 @@ export function InvoiceDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={async () => {
+          try {
+            await cancelInvoice.mutateAsync(invoice.id)
+            push('success', 'Facture annulée')
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Annuler cette facture ?"
+        description="La facture passera au statut « Annulée ». Elle reste consultable et son numéro n'est pas réutilisé — pour une facture déjà payée en partie ou en totalité, émets plutôt un avoir."
+        confirmLabel="Annuler la facture"
+        danger
+      />
     </div>
   )
 }

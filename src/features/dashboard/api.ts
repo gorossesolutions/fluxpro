@@ -46,6 +46,7 @@ export type AgedBucket = '0-30' | '31-60' | '61-90' | '90+'
 export interface DashboardSummary {
   monthly: MonthlyRow[]
   kpis: {
+    totalCaMur: MinorUnits
     collectedThisMonthMur: MinorUnits
     pendingMur: MinorUnits
     overdueMur: MinorUnits
@@ -91,6 +92,10 @@ export function useDashboardSummary() {
       const today = new Date().toISOString().slice(0, 10)
       const currentMonthKey = monthKey(today)
 
+      // All-time invoiced revenue (spec-agnostic "CA total") — unlike the rest of this query,
+      // deliberately not bounded by the rolling 12-month window: it's the headline number for
+      // the dashboard's top banner, not a monthly breakdown figure.
+      let totalCaMur = 0 as MinorUnits
       let pendingMur = 0 as MinorUnits
       let overdueMur = 0 as MinorUnits
       const agedBuckets: Record<AgedBucket, MinorUnits> = { '0-30': 0 as MinorUnits, '31-60': 0 as MinorUnits, '61-90': 0 as MinorUnits, '90+': 0 as MinorUnits }
@@ -98,6 +103,7 @@ export function useDashboardSummary() {
       for (const inv of invoices) {
         const totalMinor = toMinorUnits(String(inv.total))
         const totalMur = mulMoney(totalMinor, inv.fx_rate_to_mur)
+        totalCaMur = addMoney(totalCaMur, totalMur)
         const key = monthKey(inv.issue_date)
         if (monthSet.has(key)) {
           invoicedByMonth.set(key, addMoney(invoicedByMonth.get(key) ?? (0 as MinorUnits), totalMur))
@@ -162,7 +168,7 @@ export function useDashboardSummary() {
 
       return {
         monthly,
-        kpis: { collectedThisMonthMur, pendingMur, overdueMur, netThisMonthMur },
+        kpis: { totalCaMur, collectedThisMonthMur, pendingMur, overdueMur, netThisMonthMur },
         agedReceivables: (['0-30', '31-60', '61-90', '90+'] as AgedBucket[]).map((bucket) => ({ bucket, amountMur: agedBuckets[bucket] })),
         expenseByCategory,
         fxRates,

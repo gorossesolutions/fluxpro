@@ -183,6 +183,24 @@ export function useUpdateQuoteMutableFields() {
   })
 }
 
+/** Unlike invoices, a quote can be deleted at any status — draft or sent/accepted/refused/
+ * expired (0018_allow_quote_deletion.sql relaxed fn_guard_quote_immutability's DELETE guard for
+ * exactly this). Quotes carry no MRA numbering-continuity requirement the way invoices do.
+ * quote_lines cascade automatically; a converted invoice just loses its source_quote_id link
+ * (on delete set null) and stays intact. */
+export function useDeleteQuote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase.from('quotes').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.all })
+    },
+  })
+}
+
 export interface AcceptQuoteInput {
   id: string
   acceptanceNote?: string
