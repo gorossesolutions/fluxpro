@@ -226,6 +226,22 @@ export function useApplyTheme() {
   }, [theme])
 }
 
+/** Same pattern as useApplyTheme, for app_settings.density. "Comfortable" is the default (no
+ * attribute — tokens.css's --spacing stays at Tailwind's own 0.25rem); "compact" sets
+ * data-density='compact', which rescales --spacing app-wide. */
+export function useApplyDensity() {
+  const { data: settings } = useAppSettings()
+  const density = settings?.density
+
+  useEffect(() => {
+    if (density === 'compact') {
+      document.documentElement.setAttribute('data-density', 'compact')
+    } else {
+      document.documentElement.removeAttribute('data-density')
+    }
+  }, [density])
+}
+
 /** Matches V1's own "Taux de change" widget exactly (EUR/USD/GBP only) — a deliberately
  * simpler, client-side alternative to the fx-snapshot Edge Function (0010_...): the user's own
  * ExchangeRate-API key lives in app_settings and every fetch happens straight from the

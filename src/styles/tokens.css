@@ -75,6 +75,15 @@
   --color-chart-2: #d95926;
 }
 
+/* Density (Paramètres → Application → "Densité"): Tailwind v4 compiles every numeric spacing
+ * utility (p-4, gap-2, h-11, ...) to calc(var(--spacing) * N), so overriding --spacing rescales
+ * padding/gaps/heights across the whole app in one place — no per-component changes needed.
+ * "Comfortable" is the default (no override, --spacing stays Tailwind's own 0.25rem); "compact"
+ * shaves it down for more rows/fields per screen. */
+:root[data-density='compact'] {
+  --spacing: 0.2rem;
+}
+
 @layer base {
   html {
     color-scheme: light dark;
