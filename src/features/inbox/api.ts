@@ -251,6 +251,13 @@ function scoreCandidate(amount: number, targetAmount: number, dateStr: string, t
  * amount + date — against expenses and invoices dated within 14 days either side, ranked by
  * amount closeness (weighted higher) then date proximity. Top 5 only; a confident exact-amount
  * match on the right day always sorts first.
+ *
+ * A recurring expense's own `expense_date` is frozen at whenever it was first created — it
+ * never moves month to month — so matching only against that column made every occurrence
+ * after the first invisible to a receipt dated for, say, this month's charge. The actual
+ * per-period dates live in expense_occurrences, so recurring expenses are matched via their
+ * occurrences instead; the match still links to the parent expense (documents.matched_entity_id
+ * has no concept of "this specific occurrence" — see docs/SCHEMA.md).
  */
 export function useMatchCandidates(doc: InboxDocument | null) {
   return useQuery({
@@ -262,35 +269,71 @@ export function useMatchCandidates(doc: InboxDocument | null) {
       const from = new Date(targetDateMs - 14 * 86_400_000).toISOString().slice(0, 10)
       const to = new Date(targetDateMs + 14 * 86_400_000).toISOString().slice(0, 10)
 
-      const [expensesResult, invoicesResult] = await Promise.all([
+      const [expensesResult, occurrencesResult, invoicesResult] = await Promise.all([
         supabase.from('expenses').select('id, supplier, amount, currency, expense_date').is('deleted_at', null).gte('expense_date', from).lte('expense_date', to),
+        supabase.from('expense_occurrences').select('expense_id, occurrence_date, amount').gte('occurrence_date', from).lte('occurrence_date', to),
         supabase.from('invoices').select('id, number, total, currency, issue_date').gte('issue_date', from).lte('issue_date', to),
       ])
       if (expensesResult.error) throw expensesResult.error
+      if (occurrencesResult.error) throw occurrencesResult.error
       if (invoicesResult.error) throw invoicesResult.error
 
-      const candidates: MatchCandidate[] = [
-        ...expensesResult.data.map((e) => ({
-          entityType: 'expense' as const,
+      const occurrenceExpenseIds = [...new Set(occurrencesResult.data.map((o) => o.expense_id))].filter(
+        (id) => !expensesResult.data.some((e) => e.id === id),
+      )
+      const occurrenceExpensesResult =
+        occurrenceExpenseIds.length > 0
+          ? await supabase.from('expenses').select('id, supplier, currency').is('deleted_at', null).in('id', occurrenceExpenseIds)
+          : { data: [], error: null }
+      if (occurrenceExpensesResult.error) throw occurrenceExpensesResult.error
+      const occurrenceExpensesById = new Map(occurrenceExpensesResult.data.map((e) => [e.id, e]))
+
+      const candidatesByKey = new Map<string, MatchCandidate>()
+      const upsertCandidate = (candidate: MatchCandidate) => {
+        const key = `${candidate.entityType}:${candidate.entityId}`
+        const existing = candidatesByKey.get(key)
+        if (!existing || candidate.score > existing.score) candidatesByKey.set(key, candidate)
+      }
+
+      for (const e of expensesResult.data) {
+        upsertCandidate({
+          entityType: 'expense',
           entityId: e.id,
           label: e.supplier,
           amount: e.amount,
           currency: e.currency,
           date: e.expense_date,
           score: scoreCandidate(e.amount, targetAmount, e.expense_date, targetDateMs),
-        })),
-        ...invoicesResult.data.map((i) => ({
-          entityType: 'invoice' as const,
+        })
+      }
+
+      for (const o of occurrencesResult.data) {
+        const expense = expensesResult.data.find((e) => e.id === o.expense_id) ?? occurrenceExpensesById.get(o.expense_id)
+        if (!expense) continue
+        upsertCandidate({
+          entityType: 'expense',
+          entityId: o.expense_id,
+          label: expense.supplier,
+          amount: o.amount,
+          currency: expense.currency,
+          date: o.occurrence_date,
+          score: scoreCandidate(o.amount, targetAmount, o.occurrence_date, targetDateMs),
+        })
+      }
+
+      for (const i of invoicesResult.data) {
+        upsertCandidate({
+          entityType: 'invoice',
           entityId: i.id,
           label: i.number ?? 'Facture (brouillon)',
           amount: i.total,
           currency: i.currency,
           date: i.issue_date,
           score: scoreCandidate(i.total, targetAmount, i.issue_date, targetDateMs),
-        })),
-      ]
+        })
+      }
 
-      return candidates.sort((a, b) => b.score - a.score).slice(0, 5)
+      return [...candidatesByKey.values()].sort((a, b) => b.score - a.score).slice(0, 5)
     },
   })
 }
