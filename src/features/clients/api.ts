@@ -139,8 +139,9 @@ export function useArchiveClient() {
       const { error } = await supabase.from('clients').update({ archived_at: new Date().toISOString() }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.clients.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(id) })
     },
   })
 }
@@ -152,8 +153,9 @@ export function useUnarchiveClient() {
       const { error } = await supabase.from('clients').update({ archived_at: null }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.clients.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(id) })
     },
   })
 }

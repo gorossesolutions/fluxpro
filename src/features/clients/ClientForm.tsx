@@ -64,24 +64,24 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Identité</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
-            <Input {...register('name')} invalid={Boolean(errors.name)} />
+            <label htmlFor="name" className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
+            <Input id="name" {...register('name')} invalid={Boolean(errors.name)} />
             {errors.name && <p className="mt-1 text-xs text-overdue">{errors.name.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Type</label>
-            <Select {...register('client_type')}>
+            <label htmlFor="client_type" className="mb-1 block text-sm font-medium text-slate">Type</label>
+            <Select id="client_type" {...register('client_type')}>
               <option value="entreprise">Entreprise</option>
               <option value="particulier">Particulier</option>
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Nom du contact</label>
-            <Input {...register('contact_name')} />
+            <label htmlFor="contact_name" className="mb-1 block text-sm font-medium text-slate">Nom du contact</label>
+            <Input id="contact_name" {...register('contact_name')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Fonction</label>
-            <Input {...register('contact_role')} />
+            <label htmlFor="contact_role" className="mb-1 block text-sm font-medium text-slate">Fonction</label>
+            <Input id="contact_role" {...register('contact_role')} />
           </div>
         </div>
       </section>
@@ -90,12 +90,12 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Identifiant fiscal</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Pays</label>
+            <label htmlFor="country_code" className="mb-1 block text-sm font-medium text-slate">Pays</label>
             <Controller
               control={control}
               name="country_code"
               render={({ field }) => (
-                <Select value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
+                <Select id="country_code" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
                   <option value="">Sélectionner…</option>
                   {countryRules.map((rule) => (
                     <option key={rule.country_code} value={rule.country_code}>
@@ -107,17 +107,22 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">
+            <label htmlFor="identifier_value" className="mb-1 block text-sm font-medium text-slate">
               {defaults?.identifierLabel ?? "Type d'identifiant"}
             </label>
-            <Input {...register('identifier_value')} placeholder={defaults?.identifierLabel} invalid={identifierCheck?.valid === false} />
+            <Input
+              id="identifier_value"
+              {...register('identifier_value')}
+              placeholder={defaults?.identifierLabel}
+              invalid={identifierCheck?.valid === false}
+            />
             {identifierCheck?.valid === false && (
               <p className="mt-1 text-xs text-pending">{identifierCheck.message} (vérifie avant d'émettre un document)</p>
             )}
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Numéro de TVA (si différent)</label>
-            <Input {...register('vat_number')} />
+            <label htmlFor="vat_number" className="mb-1 block text-sm font-medium text-slate">Numéro de TVA (si différent)</label>
+            <Input id="vat_number" {...register('vat_number')} />
           </div>
           {defaults && (
             <div className="sm:col-span-2 rounded-lg bg-blue-pale px-3 py-2 text-xs text-blue">
@@ -132,17 +137,17 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Coordonnées</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Email</label>
-            <Input type="email" {...register('email')} invalid={Boolean(errors.email)} />
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate">Email</label>
+            <Input id="email" type="email" {...register('email')} invalid={Boolean(errors.email)} />
             {errors.email && <p className="mt-1 text-xs text-overdue">{errors.email.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Téléphone</label>
-            <Input {...register('phone')} />
+            <label htmlFor="phone" className="mb-1 block text-sm font-medium text-slate">Téléphone</label>
+            <Input id="phone" {...register('phone')} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Site web</label>
-            <Input {...register('website')} />
+            <label htmlFor="website" className="mb-1 block text-sm font-medium text-slate">Site web</label>
+            <Input id="website" {...register('website')} />
           </div>
         </div>
       </section>
@@ -151,24 +156,24 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Adresse</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Ligne 1</label>
-            <Input {...register('address_line1')} />
+            <label htmlFor="address_line1" className="mb-1 block text-sm font-medium text-slate">Ligne 1</label>
+            <Input id="address_line1" {...register('address_line1')} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Ligne 2</label>
-            <Input {...register('address_line2')} />
+            <label htmlFor="address_line2" className="mb-1 block text-sm font-medium text-slate">Ligne 2</label>
+            <Input id="address_line2" {...register('address_line2')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Code postal</label>
-            <Input {...register('postal_code')} />
+            <label htmlFor="postal_code" className="mb-1 block text-sm font-medium text-slate">Code postal</label>
+            <Input id="postal_code" {...register('postal_code')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Ville</label>
-            <Input {...register('city')} />
+            <label htmlFor="city" className="mb-1 block text-sm font-medium text-slate">Ville</label>
+            <Input id="city" {...register('city')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Région / État</label>
-            <Input {...register('region')} />
+            <label htmlFor="region" className="mb-1 block text-sm font-medium text-slate">Région / État</label>
+            <Input id="region" {...register('region')} />
           </div>
         </div>
       </section>
@@ -177,8 +182,8 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Facturation</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Devise par défaut</label>
-            <Select {...register('default_currency')}>
+            <label htmlFor="default_currency" className="mb-1 block text-sm font-medium text-slate">Devise par défaut</label>
+            <Select id="default_currency" {...register('default_currency')}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -187,20 +192,20 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Conditions de paiement (jours)</label>
-            <NumberInput {...register('default_payment_terms')} />
+            <label htmlFor="default_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement (jours)</label>
+            <NumberInput id="default_payment_terms" {...register('default_payment_terms')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Taux de taxe par défaut (%)</label>
-            <NumberInput {...register('default_tax_rate')} suffix="%" />
+            <label htmlFor="default_tax_rate" className="mb-1 block text-sm font-medium text-slate">Taux de taxe par défaut (%)</label>
+            <NumberInput id="default_tax_rate" {...register('default_tax_rate')} suffix="%" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Compte bancaire par défaut</label>
+            <label htmlFor="default_bank_account_id" className="mb-1 block text-sm font-medium text-slate">Compte bancaire par défaut</label>
             <Controller
               control={control}
               name="default_bank_account_id"
               render={({ field }) => (
-                <Select value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
+                <Select id="default_bank_account_id" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
                   <option value="">Par défaut de l'entreprise</option>
                   {bankAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -212,8 +217,8 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Langue du document</label>
-            <Select {...register('document_language')}>
+            <label htmlFor="document_language" className="mb-1 block text-sm font-medium text-slate">Langue du document</label>
+            <Select id="document_language" {...register('document_language')}>
               <option value="fr">Français</option>
               <option value="en">English</option>
             </Select>
@@ -225,12 +230,12 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
         <h3 className="text-sm font-semibold text-slate">Divers</h3>
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Notes internes</label>
-            <Textarea rows={3} {...register('notes')} />
+            <label htmlFor="notes" className="mb-1 block text-sm font-medium text-slate">Notes internes</label>
+            <Textarea id="notes" rows={3} {...register('notes')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Référence client</label>
-            <Input {...register('client_reference')} />
+            <label htmlFor="client_reference" className="mb-1 block text-sm font-medium text-slate">Référence client</label>
+            <Input id="client_reference" {...register('client_reference')} />
           </div>
         </div>
       </section>

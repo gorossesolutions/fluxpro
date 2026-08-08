@@ -60,21 +60,21 @@ export function ExpenseForm({ defaultValues, onSubmit, formId, lockRecurrence }:
         <h3 className="text-sm font-semibold text-slate">Détails</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Fournisseur *</label>
-            <Input {...register('supplier')} invalid={Boolean(errors.supplier)} />
+            <label htmlFor="exp_supplier" className="mb-1 block text-sm font-medium text-slate">Fournisseur *</label>
+            <Input id="exp_supplier" {...register('supplier')} invalid={Boolean(errors.supplier)} />
             {errors.supplier && <p className="mt-1 text-xs text-overdue">{errors.supplier.message}</p>}
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Description</label>
-            <Textarea rows={2} {...register('description')} />
+            <label htmlFor="exp_description" className="mb-1 block text-sm font-medium text-slate">Description</label>
+            <Textarea id="exp_description" rows={2} {...register('description')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Catégorie</label>
+            <label htmlFor="exp_category_id" className="mb-1 block text-sm font-medium text-slate">Catégorie</label>
             <Controller
               control={control}
               name="category_id"
               render={({ field }) => (
-                <Select value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
+                <Select id="exp_category_id" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
                   <option value="">Aucune</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -86,18 +86,23 @@ export function ExpenseForm({ defaultValues, onSubmit, formId, lockRecurrence }:
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Date *</label>
-            <DatePicker disabled={lockRecurrence} {...register('expense_date')} invalid={Boolean(errors.expense_date)} />
+            <label htmlFor="exp_expense_date" className="mb-1 block text-sm font-medium text-slate">Date *</label>
+            <DatePicker
+              id="exp_expense_date"
+              disabled={lockRecurrence}
+              {...register('expense_date')}
+              invalid={Boolean(errors.expense_date)}
+            />
             {errors.expense_date && <p className="mt-1 text-xs text-overdue">{errors.expense_date.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Montant *</label>
-            <NumberInput {...register('amount')} invalid={Boolean(errors.amount)} />
+            <label htmlFor="exp_amount" className="mb-1 block text-sm font-medium text-slate">Montant *</label>
+            <NumberInput id="exp_amount" {...register('amount')} invalid={Boolean(errors.amount)} />
             {errors.amount && <p className="mt-1 text-xs text-overdue">{errors.amount.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
-            <Select {...register('currency')}>
+            <label htmlFor="exp_currency" className="mb-1 block text-sm font-medium text-slate">Devise</label>
+            <Select id="exp_currency" {...register('currency')}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -112,8 +117,8 @@ export function ExpenseForm({ defaultValues, onSubmit, formId, lockRecurrence }:
         <h3 className="text-sm font-semibold text-slate">Récurrence</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Fréquence</label>
-            <Select disabled={lockRecurrence} {...register('recurrence')}>
+            <label htmlFor="exp_recurrence" className="mb-1 block text-sm font-medium text-slate">Fréquence</label>
+            <Select id="exp_recurrence" disabled={lockRecurrence} {...register('recurrence')}>
               {Object.entries(RECURRENCE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -123,8 +128,8 @@ export function ExpenseForm({ defaultValues, onSubmit, formId, lockRecurrence }:
           </div>
           {recurrence !== 'none' && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate">Se termine le (optionnel)</label>
-              <DatePicker {...register('recurrence_end_date')} invalid={Boolean(errors.recurrence_end_date)} />
+              <label htmlFor="exp_recurrence_end_date" className="mb-1 block text-sm font-medium text-slate">Se termine le (optionnel)</label>
+              <DatePicker id="exp_recurrence_end_date" {...register('recurrence_end_date')} invalid={Boolean(errors.recurrence_end_date)} />
               {errors.recurrence_end_date && (
                 <p className="mt-1 text-xs text-overdue">{errors.recurrence_end_date.message}</p>
               )}
@@ -137,8 +142,8 @@ export function ExpenseForm({ defaultValues, onSubmit, formId, lockRecurrence }:
         <h3 className="text-sm font-semibold text-slate">Fiscal</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">TVA (le cas échéant)</label>
-            <NumberInput {...register('vat_amount')} />
+            <label htmlFor="exp_vat_amount" className="mb-1 block text-sm font-medium text-slate">TVA (le cas échéant)</label>
+            <NumberInput id="exp_vat_amount" {...register('vat_amount')} />
           </div>
           <div className="flex items-end gap-3 pb-1">
             <Controller

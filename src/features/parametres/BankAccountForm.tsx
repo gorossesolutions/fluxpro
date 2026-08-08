@@ -25,27 +25,27 @@ export function BankAccountForm({ defaultValues, onSubmit, formId }: BankAccount
   return (
     <form id={formId} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate">Banque *</label>
-        <Input {...register('bank_name')} invalid={Boolean(errors.bank_name)} />
+        <label htmlFor="ba_bank_name" className="mb-1 block text-sm font-medium text-slate">Banque *</label>
+        <Input id="ba_bank_name" {...register('bank_name')} invalid={Boolean(errors.bank_name)} />
         {errors.bank_name && <p className="mt-1 text-xs text-overdue">{errors.bank_name.message}</p>}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate">Adresse de la banque</label>
-        <Input {...register('bank_address')} />
+        <label htmlFor="ba_bank_address" className="mb-1 block text-sm font-medium text-slate">Adresse de la banque</label>
+        <Input id="ba_bank_address" {...register('bank_address')} />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate">Bénéficiaire *</label>
-        <Input {...register('beneficiary')} invalid={Boolean(errors.beneficiary)} />
+        <label htmlFor="ba_beneficiary" className="mb-1 block text-sm font-medium text-slate">Bénéficiaire *</label>
+        <Input id="ba_beneficiary" {...register('beneficiary')} invalid={Boolean(errors.beneficiary)} />
         {errors.beneficiary && <p className="mt-1 text-xs text-overdue">{errors.beneficiary.message}</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Numéro de compte</label>
-          <Input {...register('account_number')} />
+          <label htmlFor="ba_account_number" className="mb-1 block text-sm font-medium text-slate">Numéro de compte</label>
+          <Input id="ba_account_number" {...register('account_number')} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
-          <Select {...register('currency')}>
+          <label htmlFor="ba_currency" className="mb-1 block text-sm font-medium text-slate">Devise</label>
+          <Select id="ba_currency" {...register('currency')}>
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -56,17 +56,17 @@ export function BankAccountForm({ defaultValues, onSubmit, formId }: BankAccount
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">IBAN</label>
-          <Input {...register('iban')} />
+          <label htmlFor="ba_iban" className="mb-1 block text-sm font-medium text-slate">IBAN</label>
+          <Input id="ba_iban" {...register('iban')} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">BIC/SWIFT</label>
-          <Input {...register('bic_swift')} />
+          <label htmlFor="ba_bic_swift" className="mb-1 block text-sm font-medium text-slate">BIC/SWIFT</label>
+          <Input id="ba_bic_swift" {...register('bic_swift')} />
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate">Alias PayPal</label>
-        <Input {...register('paypal_alias')} />
+        <label htmlFor="ba_paypal_alias" className="mb-1 block text-sm font-medium text-slate">Alias PayPal</label>
+        <Input id="ba_paypal_alias" {...register('paypal_alias')} />
       </div>
       <button type="submit" className="hidden" aria-hidden />
     </form>

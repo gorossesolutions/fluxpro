@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { addMoney, mulMoney, toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
+import { addMoney, subMoney, mulMoney, toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
 import type { Database } from '@/types/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useBusinessIdentity, useSetVatRegistered } from '@/features/parametres/api'
@@ -152,4 +152,60 @@ export function useAutoVatRegistration() {
       })
       .catch(() => {})
   }, [identity, configs, turnoverMur, setVatRegistered, push])
+}
+
+function fiscalYearEnd(fiscalYearStart: string): string {
+  const end = new Date(fiscalYearStart)
+  end.setFullYear(end.getFullYear() + 1)
+  end.setDate(end.getDate() - 1)
+  return end.toISOString().slice(0, 10)
+}
+
+/** "Revenu imposable annuel" (chargeable income) is a net figure — invoiced revenue minus
+ * deductible expenses — not the same thing as gross CA (turnover). This estimates it for a
+ * given fiscal year so the calculator has a real starting point instead of an empty field, but
+ * it's offered as a one-click prefill (useFillIncomeFromEstimate below), never auto-applied: a
+ * chargeable-income figure is sensitive enough that overwriting whatever the user already typed
+ * without asking would be the wrong default. */
+export function useNetIncomeEstimate(fiscalYearStart: string) {
+  return useQuery({
+    queryKey: ['net-income-estimate', fiscalYearStart],
+    queryFn: async (): Promise<MinorUnits> => {
+      const start = fiscalYearStart
+      const end = fiscalYearEnd(fiscalYearStart)
+
+      const [invoicesResult, occurrencesResult] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('total, currency, fx_rate_to_mur')
+          .neq('status', 'draft')
+          .neq('status', 'cancelled')
+          .gte('issue_date', start)
+          .lte('issue_date', end),
+        supabase.from('expense_occurrences').select('amount_mur, expense_id').gte('occurrence_date', start).lte('occurrence_date', end),
+      ])
+      if (invoicesResult.error) throw invoicesResult.error
+      if (occurrencesResult.error) throw occurrencesResult.error
+
+      const revenueMur = invoicesResult.data.reduce(
+        (acc, inv) => addMoney(acc, mulMoney(toMinorUnits(String(inv.total)), inv.fx_rate_to_mur)),
+        0 as MinorUnits,
+      )
+
+      const expenseIds = [...new Set(occurrencesResult.data.map((o) => o.expense_id))]
+      let deductibleExpenseIds = new Set<string>()
+      if (expenseIds.length > 0) {
+        const { data: expenseFlags, error } = await supabase.from('expenses').select('id, is_deductible').in('id', expenseIds)
+        if (error) throw error
+        deductibleExpenseIds = new Set(expenseFlags.filter((e) => e.is_deductible).map((e) => e.id))
+      }
+      const deductibleExpensesMur = occurrencesResult.data.reduce(
+        (acc, occ) => (deductibleExpenseIds.has(occ.expense_id) ? addMoney(acc, toMinorUnits(String(occ.amount_mur))) : acc),
+        0 as MinorUnits,
+      )
+
+      const net = subMoney(revenueMur, deductibleExpensesMur)
+      return (net > 0 ? net : 0) as MinorUnits
+    },
+  })
 }

@@ -62,20 +62,20 @@ export function PaymentModal({ open, onClose, invoice, outstandingMinor }: Payme
     >
       <div className="flex flex-col gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Montant</label>
-          <NumberInput value={amount} onChange={(e) => setAmount(e.target.value)} suffix={invoice.currency} />
+          <label htmlFor="pay_amount" className="mb-1 block text-sm font-medium text-slate">Montant</label>
+          <NumberInput id="pay_amount" value={amount} onChange={(e) => setAmount(e.target.value)} suffix={invoice.currency} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Date du paiement</label>
-          <DatePicker value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+          <label htmlFor="pay_date" className="mb-1 block text-sm font-medium text-slate">Date du paiement</label>
+          <DatePicker id="pay_date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Méthode</label>
-          <Input value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Virement, carte, PayPal…" />
+          <label htmlFor="pay_method" className="mb-1 block text-sm font-medium text-slate">Méthode</label>
+          <Input id="pay_method" value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Virement, carte, PayPal…" />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Référence</label>
-          <Input value={reference} onChange={(e) => setReference(e.target.value)} />
+          <label htmlFor="pay_reference" className="mb-1 block text-sm font-medium text-slate">Référence</label>
+          <Input id="pay_reference" value={reference} onChange={(e) => setReference(e.target.value)} />
         </div>
       </div>
     </Modal>

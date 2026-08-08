@@ -17,6 +17,7 @@ interface ComboboxProps {
   placeholder?: string
   createLabel?: (query: string) => string
   invalid?: boolean
+  id?: string
 }
 
 /**
@@ -32,6 +33,7 @@ export function Combobox({
   placeholder,
   createLabel,
   invalid,
+  id,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -50,6 +52,7 @@ export function Combobox({
   return (
     <div ref={rootRef} className="relative">
       <button
+        id={id}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-invalid={invalid}

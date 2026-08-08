@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Send, Trash2 } from 'lucide-react'
+import { Save, Send, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
@@ -35,7 +36,7 @@ export function QuoteEditorPage() {
   const navigate = useNavigate()
   const { push } = useToast()
 
-  const { data: existing, isLoading: loadingExisting } = useQuote(id)
+  const { data: existing, isLoading: loadingExisting, error: existingError } = useQuote(id)
   const { data: preselectedClient } = useClient(preselectedClientId ?? undefined)
   const { data: loadedClient } = useClient(existing?.client_id ?? undefined)
   const { data: bankAccounts = [] } = useBankAccounts()
@@ -175,6 +176,16 @@ export function QuoteEditorPage() {
 
   if (id && loadingExisting) return <Skeleton className="h-96 w-full" />
 
+  if (id && (existingError || !existing)) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger ce devis"
+        description={existingError ? getErrorMessage(existingError) : 'Ce devis est introuvable.'}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -213,20 +224,25 @@ export function QuoteEditorPage() {
         <h2 className="mb-3 text-sm font-semibold text-slate">Document</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Numéro</label>
-            <Input value={existing?.number ?? "Attribué à l'envoi"} disabled />
+            <label htmlFor="qed_number" className="mb-1 block text-sm font-medium text-slate">Numéro</label>
+            <Input id="qed_number" value={existing?.number ?? "Attribué à l'envoi"} disabled />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Date</label>
-            <DatePicker value={issueDate} disabled={isLocked} onChange={(e) => setIssueDate(e.target.value)} />
+            <label htmlFor="qed_issue_date" className="mb-1 block text-sm font-medium text-slate">Date</label>
+            <DatePicker id="qed_issue_date" value={issueDate} disabled={isLocked} onChange={(e) => setIssueDate(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
-            <DatePicker value={validUntil} disabled={isLocked} onChange={(e) => setValidUntil(e.target.value)} />
+            <label htmlFor="qed_valid_until" className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
+            <DatePicker id="qed_valid_until" value={validUntil} disabled={isLocked} onChange={(e) => setValidUntil(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Compte bancaire</label>
-            <Select disabled={isLocked} value={bankAccountId ?? ''} onChange={(e) => setBankAccountId(e.target.value || null)}>
+            <label htmlFor="qed_bank_account" className="mb-1 block text-sm font-medium text-slate">Compte bancaire</label>
+            <Select
+              id="qed_bank_account"
+              disabled={isLocked}
+              value={bankAccountId ?? ''}
+              onChange={(e) => setBankAccountId(e.target.value || null)}
+            >
               <option value="">Sélectionner…</option>
               {bankAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -236,8 +252,8 @@ export function QuoteEditorPage() {
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
-            <Select disabled={isLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <label htmlFor="qed_currency" className="mb-1 block text-sm font-medium text-slate">Devise</label>
+            <Select id="qed_currency" disabled={isLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
                   {c}

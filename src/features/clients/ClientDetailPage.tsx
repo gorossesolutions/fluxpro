@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil, FileText, FileSignature, MapPin, Merge, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Pencil, FileText, FileSignature, MapPin, Merge, ExternalLink, Archive, ArchiveRestore, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '@/components/ui/KpiCard'
@@ -11,11 +11,12 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { formatMoney, formatPercent } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
-import { useClient, useUpdateClient } from './api'
+import { useClient, useUpdateClient, useArchiveClient, useUnarchiveClient } from './api'
 import { ClientFormSheet } from './ClientFormSheet'
 import { MergeClientModal } from './MergeClientModal'
 import { InvoicesListPage } from '@/features/invoices/InvoicesListPage'
@@ -101,20 +102,34 @@ function ClientDocumentsTab({ clientId }: { clientId: string }) {
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: client, isLoading } = useClient(id)
+  const { push } = useToast()
+  const { data: client, isLoading, error } = useClient(id)
   const { data: acceptanceRate } = useQuoteAcceptanceRate(id)
   const updateClient = useUpdateClient()
+  const archiveClient = useArchiveClient()
+  const unarchiveClient = useUnarchiveClient()
   const [activeTab, setActiveTab] = useState('factures')
   const [editOpen, setEditOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const [notes, setNotes] = useState<string | null>(null)
 
-  if (isLoading || !client) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
       </div>
+    )
+  }
+
+  if (error || !client) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger ce client"
+        description={error ? getErrorMessage(error) : 'Ce client est introuvable.'}
+      />
     )
   }
 
@@ -160,6 +175,17 @@ export function ClientDetailPage() {
             <Merge className="h-4 w-4" />
             Fusionner
           </Button>
+          {client.archived_at ? (
+            <Button variant="secondary" onClick={() => unarchiveClient.mutate(client.id)}>
+              <ArchiveRestore className="h-4 w-4" />
+              Désarchiver
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setArchiveOpen(true)}>
+              <Archive className="h-4 w-4" />
+              Archiver
+            </Button>
+          )}
         </div>
       </div>
 
@@ -213,6 +239,21 @@ export function ClientDetailPage() {
 
       <ClientFormSheet open={editOpen} onClose={() => setEditOpen(false)} client={client} />
       <MergeClientModal open={mergeOpen} onClose={() => setMergeOpen(false)} currentClient={client} onMerged={() => {}} />
+      <ConfirmDialog
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        onConfirm={async () => {
+          try {
+            await archiveClient.mutateAsync(client.id)
+            push('success', `« ${client.name} » archivé — rien n'a été supprimé, retrouvable via "Voir les clients archivés"`)
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Archiver ce client ?"
+        description={`« ${client.name} » sera masqué de la liste active. Aucune donnée n'est supprimée — factures et devis existants restent intacts, et tu peux le désarchiver à tout moment.`}
+        confirmLabel="Archiver"
+      />
     </div>
   )
 }

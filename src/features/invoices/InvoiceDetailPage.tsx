@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download, Pencil, Ban } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download, Pencil, Ban, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -42,7 +43,7 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { push } = useToast()
-  const { data: invoice, isLoading } = useInvoice(id)
+  const { data: invoice, isLoading, error } = useInvoice(id)
   const { data: payments = [] } = useInvoicePayments(id)
   const { data: creditNotes = [] } = useCreditNotesForInvoice(id)
   const { data: businessIdentity } = useBusinessIdentity()
@@ -57,8 +58,18 @@ export function InvoiceDetailPage() {
   const [editNotes, setEditNotes] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
 
-  if (isLoading || !invoice) {
+  if (isLoading) {
     return <Skeleton className="h-96 w-full" />
+  }
+
+  if (error || !invoice) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger la facture"
+        description={error ? getErrorMessage(error) : 'Cette facture est introuvable.'}
+      />
+    )
   }
 
   // Drafts are still fully editable via the editor.
@@ -455,12 +466,12 @@ export function InvoiceDetailPage() {
             Une facture émise est verrouillée : seuls l'échéance et les notes restent modifiables.
           </p>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Échéance</label>
-            <DatePicker value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
+            <label htmlFor="inv_due_date" className="mb-1 block text-sm font-medium text-slate">Échéance</label>
+            <DatePicker id="inv_due_date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Notes</label>
-            <Textarea rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+            <label htmlFor="inv_notes" className="mb-1 block text-sm font-medium text-slate">Notes</label>
+            <Textarea id="inv_notes" rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
           </div>
         </div>
       </Modal>

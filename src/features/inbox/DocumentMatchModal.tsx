@@ -68,16 +68,17 @@ export function DocumentMatchModal({ document, onClose }: DocumentMatchModalProp
           <h3 className="text-sm font-semibold text-slate">Ce que dit le justificatif</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate">Montant</label>
+              <label htmlFor="dm_amount" className="mb-1 block text-sm font-medium text-slate">Montant</label>
               <NumberInput
+                id="dm_amount"
                 value={amount || (document.detected_amount != null ? String(document.detected_amount) : '')}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate">Date</label>
-              <DatePicker value={date || document.detected_date || ''} onChange={(e) => setDate(e.target.value)} />
+              <label htmlFor="dm_date" className="mb-1 block text-sm font-medium text-slate">Date</label>
+              <DatePicker id="dm_date" value={date || document.detected_date || ''} onChange={(e) => setDate(e.target.value)} />
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={handleSaveDetails} disabled={updateDetails.isPending} className="self-start">

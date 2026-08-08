@@ -42,17 +42,17 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
         <h3 className="text-sm font-semibold text-slate">Identité</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
-            <Input {...register('name')} invalid={Boolean(errors.name)} />
+            <label htmlFor="bi_name" className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
+            <Input id="bi_name" {...register('name')} invalid={Boolean(errors.name)} />
             {errors.name && <p className="mt-1 text-xs text-overdue">{errors.name.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Pays</label>
+            <label htmlFor="bi_country_code" className="mb-1 block text-sm font-medium text-slate">Pays</label>
             <Controller
               control={control}
               name="country_code"
               render={({ field }) => (
-                <Select value={field.value} onChange={(e) => field.onChange(e.target.value)}>
+                <Select id="bi_country_code" value={field.value} onChange={(e) => field.onChange(e.target.value)}>
                   {countryRules.map((rule) => (
                     <option key={rule.country_code} value={rule.country_code}>
                       {rule.country_label_fr}
@@ -63,8 +63,8 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Type d'identifiant</label>
-            <Select {...register('identifier_type')}>
+            <label htmlFor="bi_identifier_type" className="mb-1 block text-sm font-medium text-slate">Type d'identifiant</label>
+            <Select id="bi_identifier_type" {...register('identifier_type')}>
               <option value="BRN">BRN (Business Registration Number)</option>
               <option value="SIRET">SIRET</option>
               <option value="SIREN">SIREN</option>
@@ -81,8 +81,8 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Numéro d'identifiant *</label>
-            <Input {...register('identifier_value')} invalid={Boolean(errors.identifier_value)} />
+            <label htmlFor="bi_identifier_value" className="mb-1 block text-sm font-medium text-slate">Numéro d'identifiant *</label>
+            <Input id="bi_identifier_value" {...register('identifier_value')} invalid={Boolean(errors.identifier_value)} />
             {errors.identifier_value && <p className="mt-1 text-xs text-overdue">{errors.identifier_value.message}</p>}
           </div>
         </div>
@@ -92,29 +92,29 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
         <h3 className="text-sm font-semibold text-slate">Coordonnées</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Email *</label>
-            <Input type="email" {...register('email')} invalid={Boolean(errors.email)} />
+            <label htmlFor="bi_email" className="mb-1 block text-sm font-medium text-slate">Email *</label>
+            <Input id="bi_email" type="email" {...register('email')} invalid={Boolean(errors.email)} />
             {errors.email && <p className="mt-1 text-xs text-overdue">{errors.email.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Téléphone</label>
-            <Input {...register('phone')} />
+            <label htmlFor="bi_phone" className="mb-1 block text-sm font-medium text-slate">Téléphone</label>
+            <Input id="bi_phone" {...register('phone')} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Adresse — ligne 1</label>
-            <Input {...register('address_line1')} />
+            <label htmlFor="bi_address_line1" className="mb-1 block text-sm font-medium text-slate">Adresse — ligne 1</label>
+            <Input id="bi_address_line1" {...register('address_line1')} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Adresse — ligne 2</label>
-            <Input {...register('address_line2')} />
+            <label htmlFor="bi_address_line2" className="mb-1 block text-sm font-medium text-slate">Adresse — ligne 2</label>
+            <Input id="bi_address_line2" {...register('address_line2')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Code postal</label>
-            <Input {...register('postal_code')} />
+            <label htmlFor="bi_postal_code" className="mb-1 block text-sm font-medium text-slate">Code postal</label>
+            <Input id="bi_postal_code" {...register('postal_code')} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Ville</label>
-            <Input {...register('city')} />
+            <label htmlFor="bi_city" className="mb-1 block text-sm font-medium text-slate">Ville</label>
+            <Input id="bi_city" {...register('city')} />
           </div>
         </div>
       </section>
@@ -132,8 +132,8 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
           </div>
           {vatRegistered && (
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate">Numéro de TVA</label>
-              <Input {...register('vat_number')} />
+              <label htmlFor="bi_vat_number" className="mb-1 block text-sm font-medium text-slate">Numéro de TVA</label>
+              <Input id="bi_vat_number" {...register('vat_number')} />
             </div>
           )}
           {!vatRegistered && (
@@ -151,16 +151,22 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
         <h3 className="text-sm font-semibold text-slate">Facturation</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Conditions de paiement par défaut (jours)</label>
-            <NumberInput {...register('default_payment_terms')} />
+            <label htmlFor="bi_default_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement par défaut (jours)</label>
+            <NumberInput id="bi_default_payment_terms" {...register('default_payment_terms')} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Détails de facturation</label>
-            <Textarea rows={3} {...register('billing_details')} placeholder="Coordonnées complémentaires affichées sur les factures" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate">Mentions légales</label>
+            <label htmlFor="bi_billing_details" className="mb-1 block text-sm font-medium text-slate">Détails de facturation</label>
             <Textarea
+              id="bi_billing_details"
+              rows={3}
+              {...register('billing_details')}
+              placeholder="Coordonnées complémentaires affichées sur les factures"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="bi_legal_mentions" className="mb-1 block text-sm font-medium text-slate">Mentions légales</label>
+            <Textarea
+              id="bi_legal_mentions"
               rows={4}
               {...register('legal_mentions')}
               placeholder="Mentions légales obligatoires selon le droit mauricien (forme juridique, capital le cas échéant, etc.)"

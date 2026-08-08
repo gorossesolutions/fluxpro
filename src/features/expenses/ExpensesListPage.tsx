@@ -23,6 +23,7 @@ import {
   type ExpenseWithCategory,
 } from './api'
 import { ExpenseFormSheet } from './ExpenseFormSheet'
+import { ExpenseOccurrencesModal } from './ExpenseOccurrencesModal'
 
 const RECURRENCE_LABELS: Record<string, string> = {
   weekly: 'Hebdo',
@@ -39,6 +40,7 @@ export function ExpensesListPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<ExpenseWithCategory | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<ExpenseWithCategory | null>(null)
+  const [occurrencesTarget, setOccurrencesTarget] = useState<ExpenseWithCategory | null>(null)
 
   const { data: categories = [] } = useExpenseCategories()
   const { data: expenses = [], isLoading, error } = useExpenses({ search, categoryId: categoryId || null, showArchived })
@@ -97,6 +99,13 @@ export function ExpensesListPage() {
                 <Pencil className="h-4 w-4" />
               </Button>
             </Tooltip>
+            {row.original.recurrence !== 'none' && (
+              <Tooltip content="Voir les occurrences générées">
+                <Button variant="ghost" size="sm" aria-label="Voir les occurrences générées" onClick={() => setOccurrencesTarget(row.original)}>
+                  <Repeat className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            )}
             {row.original.deleted_at ? (
               <Tooltip content="Restaurer la dépense">
                 <Button
@@ -176,11 +185,17 @@ export function ExpensesListPage() {
                   </span>
                 )}
               </div>
-              <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-border pt-2">
                 <Button variant="ghost" size="sm" onClick={() => setEditingExpense(exp)}>
                   <Pencil className="h-4 w-4" />
                   Modifier
                 </Button>
+                {exp.recurrence !== 'none' && (
+                  <Button variant="ghost" size="sm" onClick={() => setOccurrencesTarget(exp)}>
+                    <Repeat className="h-4 w-4" />
+                    Occurrences
+                  </Button>
+                )}
                 {exp.deleted_at ? (
                   <Button variant="ghost" size="sm" onClick={() => restoreExpense.mutate(exp.id)}>
                     <ArchiveRestore className="h-4 w-4" />
@@ -200,6 +215,7 @@ export function ExpensesListPage() {
 
       <ExpenseFormSheet open={createOpen} onClose={() => setCreateOpen(false)} />
       <ExpenseFormSheet open={editingExpense !== null} onClose={() => setEditingExpense(null)} expense={editingExpense ?? undefined} />
+      <ExpenseOccurrencesModal expense={occurrencesTarget} onClose={() => setOccurrencesTarget(null)} />
       <ConfirmDialog
         open={archiveTarget !== null}
         onClose={() => setArchiveTarget(null)}

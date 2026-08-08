@@ -62,8 +62,9 @@ export function MergeClientModal({ open, onClose, currentClient, onMerged }: Mer
           action est irréversible.
         </p>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Client à fusionner</label>
+          <label htmlFor="merge_client" className="mb-1 block text-sm font-medium text-slate">Client à fusionner</label>
           <Combobox
+            id="merge_client"
             value={selectedId}
             onSearch={setSearch}
             onChange={setSelectedId}

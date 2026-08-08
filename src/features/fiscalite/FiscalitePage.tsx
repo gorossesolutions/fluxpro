@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, X, Info } from 'lucide-react'
+import { AlertTriangle, X, Info, Wand2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Select'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { DateDisplay } from '@/components/ui/DateDisplay'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { formatMoney } from '@/lib/format'
 import { toMinorUnits, fromMinorUnits } from '@/lib/money'
@@ -14,7 +16,9 @@ import {
   useTaxBands,
   useTaxConfig,
   useSaveTaxHistory,
+  useTaxHistory,
   useVatTurnoverWatch,
+  useNetIncomeEstimate,
   currentFiscalYearStart,
   computeProgressiveTax,
   computeFsc,
@@ -35,6 +39,8 @@ export function FiscalitePage() {
   const { data: configs = [] } = useTaxConfig()
   const { data: gaps = [] } = useNumberGaps()
   const { data: turnoverMur, isLoading: loadingTurnover } = useVatTurnoverWatch()
+  const { data: history = [] } = useTaxHistory()
+  const { data: netIncomeEstimateMur, isFetching: estimating } = useNetIncomeEstimate(fiscalYearStart)
   const saveTaxHistory = useSaveTaxHistory()
 
   const fiscalYears = useMemo(() => [...new Set(allBands.map((b) => b.fiscal_year_start))].sort().reverse(), [allBands])
@@ -144,8 +150,8 @@ export function FiscalitePage() {
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate">Exercice fiscal</label>
-                <Select value={fiscalYearStart} onChange={(e) => setFiscalYearStart(e.target.value)}>
+                <label htmlFor="fisc_year_start" className="mb-1 block text-sm font-medium text-slate">Exercice fiscal</label>
+                <Select id="fisc_year_start" value={fiscalYearStart} onChange={(e) => setFiscalYearStart(e.target.value)}>
                   {fiscalYears.map((fy) => (
                     <option key={fy} value={fy}>
                       {fiscalYearLabel(fy)}
@@ -154,8 +160,21 @@ export function FiscalitePage() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate">Revenu imposable annuel (MUR)</label>
-                <NumberInput value={incomeInput} onChange={(e) => setIncomeInput(e.target.value)} placeholder="0" />
+                <label htmlFor="fisc_income" className="mb-1 block text-sm font-medium text-slate">Revenu imposable annuel (MUR)</label>
+                <NumberInput id="fisc_income" value={incomeInput} onChange={(e) => setIncomeInput(e.target.value)} placeholder="0" />
+                <button
+                  type="button"
+                  onClick={() => netIncomeEstimateMur != null && setIncomeInput(fromMinorUnits(netIncomeEstimateMur))}
+                  disabled={netIncomeEstimateMur == null || estimating}
+                  className="mt-1 flex items-center gap-1 text-xs text-blue hover:underline disabled:cursor-not-allowed disabled:text-slate/60 disabled:no-underline"
+                >
+                  <Wand2 className="h-3 w-3" />
+                  {estimating
+                    ? 'Calcul de l\'estimation…'
+                    : netIncomeEstimateMur != null
+                      ? `Pré-remplir avec une estimation (${formatMoney(netIncomeEstimateMur, 'MUR')}) — revenu facturé moins dépenses déductibles sur l'exercice, à vérifier`
+                      : 'Estimation indisponible'}
+                </button>
               </div>
             </div>
 
@@ -218,6 +237,48 @@ export function FiscalitePage() {
               {saveTaxHistory.isPending ? 'Enregistrement…' : 'Enregistrer cette estimation'}
             </Button>
           </div>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-4 text-sm font-semibold text-slate">Estimations enregistrées</h2>
+        {history.length === 0 ? (
+          <EmptyState
+            title="Aucune estimation enregistrée"
+            description="Les estimations enregistrées ci-dessus apparaîtront ici, classées par exercice fiscal."
+          />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {history.map((h) => (
+              <li
+                key={h.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-ink">{fiscalYearLabel(h.fiscal_year_start)}</p>
+                  <p className="text-xs text-slate">
+                    Revenu imposable : {h.chargeable_income != null ? formatMoney(toMinorUnits(h.chargeable_income.toFixed(2)), 'MUR') : '—'}
+                    {' · '}Total :{' '}
+                    {h.tax_amount != null && h.fsc_amount != null
+                      ? formatMoney(toMinorUnits((h.tax_amount + h.fsc_amount).toFixed(2)), 'MUR')
+                      : '—'}
+                    {' · '}
+                    <DateDisplay date={h.computed_at} />
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFiscalYearStart(h.fiscal_year_start)
+                    setIncomeInput(h.chargeable_income != null ? String(h.chargeable_income) : '')
+                  }}
+                >
+                  Charger
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
     </div>

@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
@@ -42,7 +43,7 @@ export function InvoiceEditorPage() {
   const navigate = useNavigate()
   const { push } = useToast()
 
-  const { data: existing, isLoading: loadingExisting } = useInvoice(id)
+  const { data: existing, isLoading: loadingExisting, error: existingError } = useInvoice(id)
   const { data: preselectedClient } = useClient(preselectedClientId ?? undefined)
   const { data: bankAccounts = [] } = useBankAccounts()
   const { data: countryRules = [] } = useCountryRules()
@@ -222,6 +223,16 @@ export function InvoiceEditorPage() {
     return <Skeleton className="h-96 w-full" />
   }
 
+  if (id && (existingError || !existing)) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger cette facture"
+        description={existingError ? getErrorMessage(existingError) : 'Cette facture est introuvable.'}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -276,16 +287,17 @@ export function InvoiceEditorPage() {
         <h2 className="mb-3 text-sm font-semibold text-slate">Document</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Numéro</label>
-            <Input value={existing?.number ?? 'Attribué à l\'émission'} disabled />
+            <label htmlFor="inved_number" className="mb-1 block text-sm font-medium text-slate">Numéro</label>
+            <Input id="inved_number" value={existing?.number ?? 'Attribué à l\'émission'} disabled />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Date d'émission</label>
-            <DatePicker value={issueDate} disabled={isLocked} onChange={(e) => setIssueDate(e.target.value)} />
+            <label htmlFor="inved_issue_date" className="mb-1 block text-sm font-medium text-slate">Date d'émission</label>
+            <DatePicker id="inved_issue_date" value={issueDate} disabled={isLocked} onChange={(e) => setIssueDate(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Conditions de paiement</label>
+            <label htmlFor="inved_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement</label>
             <Select
+              id="inved_payment_terms"
               disabled={isLocked}
               value={paymentTerms}
               onChange={(e) => {
@@ -302,12 +314,17 @@ export function InvoiceEditorPage() {
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Échéance</label>
-            <DatePicker value={dueDate} disabled={isLocked} onChange={(e) => setDueDate(e.target.value)} />
+            <label htmlFor="inved_due_date" className="mb-1 block text-sm font-medium text-slate">Échéance</label>
+            <DatePicker id="inved_due_date" value={dueDate} disabled={isLocked} onChange={(e) => setDueDate(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Compte bancaire</label>
-            <Select disabled={isLocked} value={bankAccountId ?? ''} onChange={(e) => setBankAccountId(e.target.value || null)}>
+            <label htmlFor="inved_bank_account" className="mb-1 block text-sm font-medium text-slate">Compte bancaire</label>
+            <Select
+              id="inved_bank_account"
+              disabled={isLocked}
+              value={bankAccountId ?? ''}
+              onChange={(e) => setBankAccountId(e.target.value || null)}
+            >
               <option value="">Sélectionner…</option>
               {bankAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -317,8 +334,8 @@ export function InvoiceEditorPage() {
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
-            <Select disabled={isLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <label htmlFor="inved_currency" className="mb-1 block text-sm font-medium text-slate">Devise</label>
+            <Select id="inved_currency" disabled={isLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -363,8 +380,8 @@ export function InvoiceEditorPage() {
 
       <Card>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Notes</label>
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isLocked && false} />
+          <label htmlFor="inved_notes" className="mb-1 block text-sm font-medium text-slate">Notes</label>
+          <Input id="inved_notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isLocked && false} />
         </div>
       </Card>
 

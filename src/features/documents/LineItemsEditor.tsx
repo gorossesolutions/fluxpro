@@ -70,12 +70,17 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
               />
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-xs text-slate">Quantité</label>
-                  <NumberInput value={line.quantity} onChange={(e) => updateLine(index, { quantity: e.target.value })} />
+                  <label htmlFor={`line-quantity-${index}`} className="mb-1 block text-xs text-slate">Quantité</label>
+                  <NumberInput
+                    id={`line-quantity-${index}`}
+                    value={line.quantity}
+                    onChange={(e) => updateLine(index, { quantity: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-slate">Prix unitaire</label>
+                  <label htmlFor={`line-unit-price-${index}`} className="mb-1 block text-xs text-slate">Prix unitaire</label>
                   <NumberInput
+                    id={`line-unit-price-${index}`}
                     value={line.unit_price}
                     suffix={currency}
                     onChange={(e) => updateLine(index, { unit_price: e.target.value })}

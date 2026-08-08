@@ -83,8 +83,8 @@ export function CreditNoteModal({ open, onClose, invoice }: CreditNoteModalProps
     >
       <div className="flex flex-col gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Motif *</label>
-          <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Raison de l'avoir…" />
+          <label htmlFor="cn_reason" className="mb-1 block text-sm font-medium text-slate">Motif *</label>
+          <Textarea id="cn_reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Raison de l'avoir…" />
         </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold text-slate">Lignes (préremplies depuis la facture, ajustables)</h3>

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Modal } from '@/components/ui/Modal'
@@ -39,7 +40,7 @@ export function QuoteDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { push } = useToast()
-  const { data: quote, isLoading } = useQuote(id)
+  const { data: quote, isLoading, error } = useQuote(id)
   const { data: businessIdentity } = useBusinessIdentity()
   const { data: bankAccounts = [] } = useBankAccounts()
   const acceptQuote = useAcceptQuote()
@@ -54,7 +55,17 @@ export function QuoteDetailPage() {
   const [editNotes, setEditNotes] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  if (isLoading || !quote) return <Skeleton className="h-96 w-full" />
+  if (isLoading) return <Skeleton className="h-96 w-full" />
+
+  if (error || !quote) {
+    return (
+      <EmptyState
+        icon={<AlertTriangle className="h-8 w-8 text-overdue" />}
+        title="Impossible de charger le devis"
+        description={error ? getErrorMessage(error) : 'Ce devis est introuvable.'}
+      />
+    )
+  }
 
   if (quote.status === 'draft') return <QuoteEditorPage />
 
@@ -322,8 +333,8 @@ export function QuoteDetailPage() {
           </>
         }
       >
-        <label className="mb-1 block text-sm font-medium text-slate">Note / référence bon de commande (optionnel)</label>
-        <Textarea rows={3} value={acceptanceNote} onChange={(e) => setAcceptanceNote(e.target.value)} />
+        <label htmlFor="qd_acceptance_note" className="mb-1 block text-sm font-medium text-slate">Note / référence bon de commande (optionnel)</label>
+        <Textarea id="qd_acceptance_note" rows={3} value={acceptanceNote} onChange={(e) => setAcceptanceNote(e.target.value)} />
       </Modal>
 
       <Modal
@@ -346,12 +357,12 @@ export function QuoteDetailPage() {
             Un devis envoyé est verrouillé : seuls la validité et les notes restent modifiables.
           </p>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
-            <DatePicker value={editValidUntil} onChange={(e) => setEditValidUntil(e.target.value)} />
+            <label htmlFor="qd_valid_until" className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
+            <DatePicker id="qd_valid_until" value={editValidUntil} onChange={(e) => setEditValidUntil(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Notes</label>
-            <Textarea rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+            <label htmlFor="qd_notes" className="mb-1 block text-sm font-medium text-slate">Notes</label>
+            <Textarea id="qd_notes" rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
           </div>
         </div>
       </Modal>

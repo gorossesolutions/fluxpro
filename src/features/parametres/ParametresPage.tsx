@@ -42,7 +42,7 @@ const BANK_FORM_ID = 'bank-account-form'
 
 function IdentityTab() {
   const { push } = useToast()
-  const { data: identity, isLoading } = useBusinessIdentity()
+  const { data: identity, isLoading, error } = useBusinessIdentity()
   const saveIdentity = useSaveBusinessIdentity()
   const uploadLogo = useUploadLogo()
   const { data: logoUrl, isLoading: logoUrlLoading } = useLogoUrl(identity?.logo_path)
@@ -68,6 +68,7 @@ function IdentityTab() {
   }
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
+  if (error) return <EmptyState title="Identité indisponible" description={getErrorMessage(error)} />
 
   return (
     <Card>
@@ -348,11 +349,12 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
     <Card>
       <h2 className="mb-4 text-sm font-semibold text-ink">Taux de change → MUR</h2>
 
-      <label className="mb-1 block text-sm font-medium text-slate">
+      <label htmlFor="fx_api_key" className="mb-1 block text-sm font-medium text-slate">
         ExchangeRate-API key <span className="font-normal text-slate/70">(gratuit sur exchangerate-api.com)</span>
       </label>
       <div className="flex gap-2">
         <PasswordInput
+          id="fx_api_key"
           value={apiKeyInput}
           onChange={(e) => setApiKeyInput(e.target.value)}
           className="flex-1"
@@ -367,8 +369,9 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {CLIENT_FX_CURRENCIES.map((currency) => (
           <div key={currency}>
-            <label className="mb-1 block text-sm font-medium text-slate">{FX_CURRENCY_LABELS[currency]}</label>
+            <label htmlFor={`fx_rate_${currency}`} className="mb-1 block text-sm font-medium text-slate">{FX_CURRENCY_LABELS[currency]}</label>
             <NumberInput
+              id={`fx_rate_${currency}`}
               value={rateInputs[currency]}
               onChange={(e) => setRateInputs((prev) => ({ ...prev, [currency]: e.target.value }))}
               onBlur={() => void handleRateBlur(currency)}
@@ -386,11 +389,18 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
 
 function ApplicationTab() {
   const { push } = useToast()
-  const { data: settings, isLoading } = useAppSettings()
+  const { data: settings, isLoading, error } = useAppSettings()
   const updateSettings = useUpdateAppSettings()
 
   if (isLoading) return <Skeleton className="h-48 w-full" />
-  if (!settings) return <EmptyState title="Paramètres indisponibles" description="Réessaie de recharger la page." />
+  if (error || !settings) {
+    return (
+      <EmptyState
+        title="Paramètres indisponibles"
+        description={error ? getErrorMessage(error) : 'Réessaie de recharger la page.'}
+      />
+    )
+  }
 
   const handleChange = async (updates: Parameters<typeof updateSettings.mutateAsync>[0]) => {
     try {
@@ -406,23 +416,24 @@ function ApplicationTab() {
       <Card>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Thème</label>
-            <Select value={settings.theme} onChange={(e) => void handleChange({ theme: e.target.value })}>
+            <label htmlFor="app_theme" className="mb-1 block text-sm font-medium text-slate">Thème</label>
+            <Select id="app_theme" value={settings.theme} onChange={(e) => void handleChange({ theme: e.target.value })}>
               <option value="system">Système</option>
               <option value="light">Clair</option>
               <option value="dark">Sombre</option>
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Densité</label>
-            <Select value={settings.density} onChange={(e) => void handleChange({ density: e.target.value })}>
+            <label htmlFor="app_density" className="mb-1 block text-sm font-medium text-slate">Densité</label>
+            <Select id="app_density" value={settings.density} onChange={(e) => void handleChange({ density: e.target.value })}>
               <option value="comfortable">Confortable</option>
               <option value="compact">Compacte</option>
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate">Intervalle anti-pause (jours)</label>
+            <label htmlFor="app_keepalive" className="mb-1 block text-sm font-medium text-slate">Intervalle anti-pause (jours)</label>
             <NumberInput
+              id="app_keepalive"
               value={String(settings.keepalive_interval_days)}
               onChange={(e) => {
                 const days = Number.parseInt(e.target.value, 10)

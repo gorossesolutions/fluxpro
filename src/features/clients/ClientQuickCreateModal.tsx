@@ -72,16 +72,16 @@ export function ClientQuickCreateModal({ open, onClose, initialName, onCreated }
     >
       <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
-          <Input {...register('name')} />
+          <label htmlFor="qc_name" className="mb-1 block text-sm font-medium text-slate">Nom / Société *</label>
+          <Input id="qc_name" {...register('name')} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Pays</label>
+          <label htmlFor="qc_country_code" className="mb-1 block text-sm font-medium text-slate">Pays</label>
           <Controller
             control={control}
             name="country_code"
             render={({ field }) => (
-              <Select value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
+              <Select id="qc_country_code" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)}>
                 <option value="">Sélectionner…</option>
                 {countryRules.map((rule) => (
                   <option key={rule.country_code} value={rule.country_code}>
@@ -93,20 +93,22 @@ export function ClientQuickCreateModal({ open, onClose, initialName, onCreated }
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">{defaults?.identifierLabel ?? "Type d'identifiant"}</label>
-          <Input {...register('identifier_value')} placeholder={defaults?.identifierLabel} />
+          <label htmlFor="qc_identifier_value" className="mb-1 block text-sm font-medium text-slate">
+            {defaults?.identifierLabel ?? "Type d'identifiant"}
+          </label>
+          <Input id="qc_identifier_value" {...register('identifier_value')} placeholder={defaults?.identifierLabel} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Email</label>
-          <Input type="email" {...register('email')} />
+          <label htmlFor="qc_email" className="mb-1 block text-sm font-medium text-slate">Email</label>
+          <Input id="qc_email" type="email" {...register('email')} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Adresse</label>
-          <Input {...register('address_line1')} />
+          <label htmlFor="qc_address_line1" className="mb-1 block text-sm font-medium text-slate">Adresse</label>
+          <Input id="qc_address_line1" {...register('address_line1')} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Devise</label>
-          <Select {...register('default_currency')}>
+          <label htmlFor="qc_default_currency" className="mb-1 block text-sm font-medium text-slate">Devise</label>
+          <Select id="qc_default_currency" {...register('default_currency')}>
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
                 {c}
