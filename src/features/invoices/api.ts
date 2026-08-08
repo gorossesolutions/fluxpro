@@ -69,6 +69,37 @@ export function useInvoicePayments(invoiceId: string | undefined) {
   })
 }
 
+export interface ClientPayment extends Payment {
+  invoice_number: string | null
+}
+
+/** Payments don't carry client_id directly (only invoice_id) — resolved via the client's own
+ * invoices first, same two-step pattern as useCreditNotesForInvoice below. */
+export function useClientPayments(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['payments', 'client', clientId],
+    enabled: Boolean(clientId),
+    queryFn: async (): Promise<ClientPayment[]> => {
+      const { data: invoices, error: invoicesError } = await supabase.from('invoices').select('id, number').eq('client_id', clientId!)
+      if (invoicesError) throw invoicesError
+      if (invoices.length === 0) return []
+
+      const { data: payments, error } = await supabase
+        .from('payments')
+        .select('*')
+        .in(
+          'invoice_id',
+          invoices.map((i) => i.id),
+        )
+        .order('payment_date', { ascending: false })
+      if (error) throw error
+
+      const numberByInvoiceId = new Map(invoices.map((i) => [i.id, i.number]))
+      return payments.map((p) => ({ ...p, invoice_number: numberByInvoiceId.get(p.invoice_id) ?? null }))
+    },
+  })
+}
+
 export interface CreditNoteWithLines extends CreditNote {
   credit_note_lines: CreditNoteLine[]
 }

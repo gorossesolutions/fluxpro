@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil, FileText, FileSignature, MapPin, Merge } from 'lucide-react'
+import { ArrowLeft, Pencil, FileText, FileSignature, MapPin, Merge, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { KpiCard } from '@/components/ui/KpiCard'
@@ -9,13 +9,20 @@ import { Card } from '@/components/ui/Card'
 import { Textarea } from '@/components/ui/Textarea'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
+import { DateDisplay } from '@/components/ui/DateDisplay'
+import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
-import { formatMoney } from '@/lib/format'
+import { formatMoney, formatPercent } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useClient, useUpdateClient } from './api'
 import { ClientFormSheet } from './ClientFormSheet'
 import { MergeClientModal } from './MergeClientModal'
 import { InvoicesListPage } from '@/features/invoices/InvoicesListPage'
 import { QuotesListPage } from '@/features/quotes/QuotesListPage'
+import { useQuoteAcceptanceRate } from '@/features/quotes/api'
+import { useClientPayments } from '@/features/invoices/api'
+import { useClientMatchedDocuments, getDocumentSignedUrl } from '@/features/inbox/api'
 
 const TABS = [
   { id: 'factures', label: 'Factures' },
@@ -25,10 +32,77 @@ const TABS = [
   { id: 'notes', label: 'Notes' },
 ]
 
+function ClientPaymentsTab({ clientId, navigate }: { clientId: string; navigate: (path: string) => void }) {
+  const { data: payments = [], isLoading, error } = useClientPayments(clientId)
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+  if (error) return <EmptyState title="Impossible de charger les paiements" description={getErrorMessage(error)} />
+  if (payments.length === 0) {
+    return <EmptyState title="Aucun paiement" description="S'affichera ici une fois les factures de ce client réglées." />
+  }
+
+  return (
+    <Card className="p-0">
+      <ul className="divide-y divide-border">
+        {payments.map((p) => (
+          <li key={p.id} className="flex items-center justify-between px-4 py-3 text-sm">
+            <div>
+              <button onClick={() => navigate(`/factures/${p.invoice_id}`)} className="font-medium text-ink hover:text-blue">
+                {p.invoice_number ?? 'Facture'}
+              </button>
+              <p className="text-xs text-slate">
+                <DateDisplay date={p.payment_date} /> {p.method && `— ${p.method}`}
+              </p>
+            </div>
+            <CurrencyDisplay amount={toMinorUnits(String(p.amount))} currency={p.currency} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+function ClientDocumentsTab({ clientId }: { clientId: string }) {
+  const { push } = useToast()
+  const { data: documents = [], isLoading, error } = useClientMatchedDocuments(clientId)
+
+  const handlePreview = async (storagePath: string) => {
+    try {
+      const url = await getDocumentSignedUrl(storagePath)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      push('error', `Impossible d'ouvrir le fichier : ${getErrorMessage(err)}`)
+    }
+  }
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+  if (error) return <EmptyState title="Impossible de charger les documents" description={getErrorMessage(error)} />
+  if (documents.length === 0) {
+    return <EmptyState title="Aucun justificatif lié" description="Les documents rapprochés d'une facture de ce client apparaîtront ici." />
+  }
+
+  return (
+    <Card className="p-0">
+      <ul className="divide-y divide-border">
+        {documents.map((d) => (
+          <li key={d.id} className="flex items-center justify-between px-4 py-3 text-sm">
+            <button onClick={() => void handlePreview(d.storage_path)} className="flex items-center gap-1.5 text-ink hover:text-blue">
+              <span className="break-all">{d.file_name}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate" />
+            </button>
+            <DateDisplay date={d.created_at} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: client, isLoading } = useClient(id)
+  const { data: acceptanceRate } = useQuoteAcceptanceRate(id)
   const updateClient = useUpdateClient()
   const [activeTab, setActiveTab] = useState('factures')
   const [editOpen, setEditOpen] = useState(false)
@@ -45,7 +119,6 @@ export function ClientDetailPage() {
   }
 
   const financials = client.financials
-  const acceptanceRate = null // wired once quotes stats are available
 
   return (
     <div className="flex flex-col gap-6">
@@ -109,19 +182,15 @@ export function ClientDetailPage() {
           }
         />
         <KpiCard label="Documents" value={String(financials?.invoice_count ?? 0)} state="neutral" />
-        <KpiCard label="Taux d'acceptation devis" value={acceptanceRate ?? '—'} state="neutral" />
+        <KpiCard label="Taux d'acceptation devis" value={acceptanceRate != null ? formatPercent(acceptanceRate) : '—'} state="neutral" />
       </div>
 
       <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'factures' && <InvoicesListPage clientId={client.id} embedded />}
       {activeTab === 'devis' && <QuotesListPage clientId={client.id} embedded />}
-      {activeTab === 'paiements' && (
-        <EmptyState title="Historique des paiements" description="S'affichera ici une fois les factures de ce client réglées." />
-      )}
-      {activeTab === 'documents' && (
-        <EmptyState title="Justificatifs liés" description="Les documents rattachés aux factures de ce client apparaîtront ici." />
-      )}
+      {activeTab === 'paiements' && <ClientPaymentsTab clientId={client.id} navigate={navigate} />}
+      {activeTab === 'documents' && <ClientDocumentsTab clientId={client.id} />}
       {activeTab === 'notes' && (
         <Card>
           <Textarea

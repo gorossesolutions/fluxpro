@@ -24,6 +24,35 @@ export function useDocuments(filters: DocumentListFilters = {}) {
   })
 }
 
+/** Documents matched to any of this client's invoices (spec: the Client detail page's own
+ * "Documents" tab) — resolved via the client's invoice ids first, matched_entity_type/
+ * matched_entity_id being a loose polymorphic reference rather than a real FK (see
+ * docs/SCHEMA.md's reconciliation section). */
+export function useClientMatchedDocuments(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['documents', 'client', clientId],
+    enabled: Boolean(clientId),
+    queryFn: async (): Promise<InboxDocument[]> => {
+      const { data: invoices, error: invoicesError } = await supabase.from('invoices').select('id').eq('client_id', clientId!)
+      if (invoicesError) throw invoicesError
+      if (invoices.length === 0) return []
+
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('matched_entity_type', 'invoice')
+        .in(
+          'matched_entity_id',
+          invoices.map((i) => i.id),
+        )
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data
+    },
+  })
+}
+
 /** Lightweight count for the "À classer" tab badge — a head-only request, never fetches rows,
  * so it's cheap to run alongside whichever tab's own full query is active. */
 export function useUnmatchedDocumentCount() {

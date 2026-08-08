@@ -28,6 +28,25 @@ export function useQuotes(filters: QuoteListFilters = {}) {
   })
 }
 
+/**
+ * Of every quote actually sent out (drafts are excluded — nobody ever decided on those),
+ * what fraction were accepted. Null when the client has no decided quotes yet, so the KPI can
+ * render "—" instead of a misleading 0%.
+ */
+export function useQuoteAcceptanceRate(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['quotes', 'acceptance-rate', clientId],
+    enabled: Boolean(clientId),
+    queryFn: async (): Promise<number | null> => {
+      const { data, error } = await supabase.from('quotes').select('status').eq('client_id', clientId!).neq('status', 'draft')
+      if (error) throw error
+      if (data.length === 0) return null
+      const accepted = data.filter((q) => q.status === 'accepted').length
+      return accepted / data.length
+    },
+  })
+}
+
 export interface QuoteWithLines extends Quote {
   quote_lines: QuoteLine[]
 }
