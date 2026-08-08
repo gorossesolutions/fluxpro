@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Star, Pencil, Trash2, Building2, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Star, Pencil, Trash2, Building2, RefreshCw, LogOut } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -14,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { getErrorMessage } from '@/lib/errors'
 import { useBankAccounts } from '@/features/reference/api'
+import { useAuth } from '@/features/auth/AuthContext'
 import { BusinessIdentityForm } from './BusinessIdentityForm'
 import { BankAccountForm } from './BankAccountForm'
 import {
@@ -389,8 +391,15 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
 
 function ApplicationTab() {
   const { push } = useToast()
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const { data: settings, isLoading, error } = useAppSettings()
   const updateSettings = useUpdateAppSettings()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/connexion', { replace: true })
+  }
 
   if (isLoading) return <Skeleton className="h-48 w-full" />
   if (error || !settings) {
@@ -448,6 +457,15 @@ function ApplicationTab() {
       </Card>
 
       <FxRateSection settings={settings} />
+
+      <Card>
+        <h2 className="mb-1 text-sm font-semibold text-ink">Session</h2>
+        <p className="mb-3 text-xs text-slate">Se déconnecter de FluxPro sur cet appareil.</p>
+        <Button variant="secondary" onClick={() => void handleSignOut()}>
+          <LogOut className="h-4 w-4" />
+          Déconnexion
+        </Button>
+      </Card>
     </div>
   )
 }
