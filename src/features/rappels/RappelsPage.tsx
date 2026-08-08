@@ -113,7 +113,7 @@ export function RappelsPage() {
                             }
                             className={cn(
                               'flex h-9 min-w-[52px] items-center justify-center gap-1 rounded-lg border px-2 text-xs font-medium transition-colors duration-150',
-                              !isReached && 'cursor-not-allowed border-border text-slate/40',
+                              !isReached && 'cursor-not-allowed border-border text-slate/70',
                               isReached && !isSent && 'border-overdue/40 text-overdue hover:bg-overdue/5',
                               isSent && 'border-paid bg-paid/10 text-paid',
                             )}

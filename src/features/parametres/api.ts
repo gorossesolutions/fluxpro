@@ -206,6 +206,26 @@ export function useUpdateAppSettings() {
   })
 }
 
+/** Runs once per authenticated session (mounted in AppLayout): applies app_settings.theme to
+ * the DOM. tokens.css already defines the light/dark CSS custom properties and reads them off
+ * documentElement's data-theme attribute — 'light'/'dark' pins a theme, no attribute at all
+ * means "follow the OS" (prefers-color-scheme) — but nothing was ever setting that attribute,
+ * so the Paramètres theme selector saved a value with no visible effect. Reactive: changing the
+ * setting in Paramètres invalidates this same query, so the DOM updates immediately, no reload
+ * needed. */
+export function useApplyTheme() {
+  const { data: settings } = useAppSettings()
+  const theme = settings?.theme
+
+  useEffect(() => {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', theme)
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [theme])
+}
+
 /** Matches V1's own "Taux de change" widget exactly (EUR/USD/GBP only) — a deliberately
  * simpler, client-side alternative to the fx-snapshot Edge Function (0010_...): the user's own
  * ExchangeRate-API key lives in app_settings and every fetch happens straight from the

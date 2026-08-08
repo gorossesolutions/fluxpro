@@ -4,7 +4,7 @@ import { Menu, MoreHorizontal, LogOut } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { NAV_ITEMS } from './nav'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useAutoRefreshFxRates } from '@/features/parametres/api'
+import { useAutoRefreshFxRates, useApplyTheme } from '@/features/parametres/api'
 import { useAutoVatRegistration } from '@/features/fiscalite/api'
 
 /**
@@ -17,6 +17,7 @@ export function AppLayout() {
   const primaryItems = NAV_ITEMS.filter((i) => i.primary)
   useAutoRefreshFxRates()
   useAutoVatRegistration()
+  useApplyTheme()
 
   return (
     <div className="min-h-screen bg-canvas">
