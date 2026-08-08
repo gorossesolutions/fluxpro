@@ -86,6 +86,29 @@ describe('buildDocumentPdfDefinition', () => {
     expect(definition.content).toBeDefined()
   })
 
+  it('renders real PDF bytes with a logo embedded via logoDataUrl', async () => {
+    // 1x1 transparent PNG — enough for pdfmake to actually decode and place an image node,
+    // not just accept an arbitrary string.
+    const onePixelPng =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+    const definition = buildDocumentPdfDefinition({ ...baseInput, logoDataUrl: onePixelPng })
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      try {
+        pdfMake.createPdf(definition).getBuffer((b: Buffer) => resolve(b))
+      } catch (err) {
+        reject(err as Error)
+      }
+    })
+    expect(buffer.length).toBeGreaterThan(1000)
+    expect(buffer.subarray(0, 5).toString('utf-8')).toBe('%PDF-')
+  })
+
+  it('omits the logo image node entirely when no logoDataUrl is given', () => {
+    const definition = buildDocumentPdfDefinition(baseInput)
+    const content = definition.content as unknown as Record<string, unknown>[]
+    expect(content.some((node) => 'image' in node)).toBe(false)
+  })
+
   it('never leaves a narrow/no-break space in any text leaf (pdfmake\'s bundled font has no glyph for it — renders as a visible tofu box, e.g. "Rs 70 000,00")', () => {
     // A large enough amount that fr-FR's Intl.NumberFormat groups thousands — that grouping
     // separator is U+202F, not a plain space, which is exactly what broke on a real generated

@@ -67,6 +67,10 @@ export interface DocumentPdfInput {
   /** e.g. 'FACTURE', 'DEVIS', 'AVOIR' — spec §3.6/§17: every mandatory mention has a field, no
    * hardcoded document-type string beyond this simple French label. */
   documentTypeLabel: string
+  /** Data URL (data:image/png;base64,... or data:image/jpeg;...) — pdfmake needs the actual
+   * image bytes inline, it cannot fetch a Supabase signed URL itself. Callers resolve the
+   * business's logo_path to a signed URL and convert it before building this input. */
+  logoDataUrl?: string | null
   number: string
   issueDate: string
   dueDate?: string | null
@@ -146,7 +150,13 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
     if (bank.paypalAlias) bankLines.push(`PayPal : ${bank.paypalAlias}`)
   }
 
-  const content: Content[] = [
+  const content: Content[] = []
+
+  if (input.logoDataUrl) {
+    content.push({ image: input.logoDataUrl, fit: [140, 60], margin: [0, 0, 0, 12] })
+  }
+
+  content.push(
     {
       columns: [
         { text: input.documentTypeLabel, style: 'documentTitle', width: '*' },
@@ -169,7 +179,7 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
       ],
       margin: [0, 0, 0, 24],
     },
-  ]
+  )
 
   if (input.parentDocumentNumber || input.reason) {
     content.push({

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { subMoney, sumMoney, toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
-import { useBusinessIdentity } from '@/features/parametres/api'
+import { useBusinessIdentity, getLogoDataUrl } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
 import { useInvoice, useInvoicePayments, useSaveInvoiceDraft, useUpdateInvoiceMutableFields, useCreditNotesForInvoice } from './api'
@@ -127,6 +127,17 @@ export function InvoiceDetailPage() {
       }
     : null
 
+  // Best-effort: a broken/expired signed URL shouldn't block the PDF itself, just leave it
+  // without a logo.
+  const resolveLogoDataUrl = async (): Promise<string | null> => {
+    if (!businessIdentity?.logo_path) return null
+    try {
+      return await getLogoDataUrl(businessIdentity.logo_path)
+    } catch {
+      return null
+    }
+  }
+
   const handleDownloadInvoicePdf = async () => {
     if (!issuerParty) {
       push('error', "Complète d'abord l'identité de l'entreprise dans Paramètres avant d'exporter un PDF.")
@@ -151,6 +162,7 @@ export function InvoiceDetailPage() {
     const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
     downloadDocumentPdf({
       documentTypeLabel: 'FACTURE',
+      logoDataUrl: await resolveLogoDataUrl(),
       number: invoice.number ?? 'BROUILLON',
       issueDate: invoice.issue_date,
       dueDate: invoice.due_date,
@@ -189,6 +201,7 @@ export function InvoiceDetailPage() {
     const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
     downloadDocumentPdf({
       documentTypeLabel: 'AVOIR',
+      logoDataUrl: await resolveLogoDataUrl(),
       number: creditNote.number ?? 'BROUILLON',
       issueDate: creditNote.issued_at ?? new Date().toISOString(),
       issuer: issuerParty,

@@ -4,6 +4,8 @@ import { Menu, MoreHorizontal, LogOut } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { NAV_ITEMS } from './nav'
 import { useAuth } from '@/features/auth/AuthContext'
+import { useAutoRefreshFxRates } from '@/features/parametres/api'
+import { useAutoVatRegistration } from '@/features/fiscalite/api'
 
 /**
  * Four responsive nav treatments in one shell (spec §15.2):
@@ -13,6 +15,8 @@ export function AppLayout() {
   const [railOpen, setRailOpen] = useState(false)
   const { signOut } = useAuth()
   const primaryItems = NAV_ITEMS.filter((i) => i.primary)
+  useAutoRefreshFxRates()
+  useAutoVatRegistration()
 
   return (
     <div className="min-h-screen bg-canvas">

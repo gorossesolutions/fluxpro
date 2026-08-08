@@ -1,10 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
-import type { Database, IdentifierType } from '@/types/supabase'
+import type { Database } from '@/types/supabase'
 
 export type CountryRule = Database['public']['Tables']['country_rules']['Row']
 export type BankAccount = Database['public']['Tables']['bank_accounts']['Row']
+
+// Pure, supabase-free logic lives in taxRules.ts (same split as fiscalite/calculations.ts) so it
+// can be unit-tested without pulling in the real Supabase client, which throws at import time
+// without VITE_SUPABASE_URL/ANON_KEY set.
+export { resolveCountryDefaults, resolveDefaultTaxRate, MAURITIUS_STANDARD_VAT_RATE } from './taxRules'
+export type { CountryDefaults } from './taxRules'
 
 /** Reference data changes essentially never at runtime — long staleTime avoids refetch churn. */
 const REFERENCE_STALE_TIME = 10 * 60 * 1000
@@ -19,29 +25,6 @@ export function useCountryRules() {
     },
     staleTime: REFERENCE_STALE_TIME,
   })
-}
-
-export interface CountryDefaults {
-  identifierType: IdentifierType
-  identifierLabel: string
-  identifierRegex: string | null
-  supplyTreatment: 'domestic' | 'zero_rated_export'
-  countryMention: string | null
-}
-
-/** Country-driven defaults for a client record (spec §6.3): identifier type/label, supply
- * treatment, and the mandatory mention — all resolved from country_rules, never hardcoded. */
-export function resolveCountryDefaults(rules: CountryRule[], countryCode: string | null): CountryDefaults | null {
-  if (!countryCode) return null
-  const rule = rules.find((r) => r.country_code === countryCode)
-  if (!rule) return null
-  return {
-    identifierType: rule.default_identifier_type,
-    identifierLabel: rule.identifier_label,
-    identifierRegex: rule.identifier_regex,
-    supplyTreatment: countryCode === 'MU' ? 'domestic' : 'zero_rated_export',
-    countryMention: rule.reverse_charge ? rule.mention_fr : null,
-  }
 }
 
 export interface ResolvedFxRate {

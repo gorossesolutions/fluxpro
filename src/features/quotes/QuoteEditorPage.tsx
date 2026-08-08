@@ -11,8 +11,9 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
 import { useClient, type Client } from '@/features/clients/api'
-import { useBankAccounts, resolveCountryDefaults, useCountryRules } from '@/features/reference/api'
+import { useBankAccounts, resolveCountryDefaults, useCountryRules, resolveDefaultTaxRate } from '@/features/reference/api'
 import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
+import { useBusinessIdentity } from '@/features/parametres/api'
 import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
@@ -38,6 +39,8 @@ export function QuoteEditorPage() {
   const { data: loadedClient } = useClient(existing?.client_id ?? undefined)
   const { data: bankAccounts = [] } = useBankAccounts()
   const { data: countryRules = [] } = useCountryRules()
+  const { data: businessIdentity } = useBusinessIdentity()
+  const vatRegistered = businessIdentity?.vat_registered ?? false
   const saveDraft = useSaveQuoteDraft()
   const issueQuote = useIssueQuote()
 
@@ -59,10 +62,10 @@ export function QuoteEditorPage() {
       appliedPreselection.current = true
       setClient(preselectedClient)
       setCurrency(preselectedClient.default_currency)
-      if (preselectedClient.default_tax_rate != null) setTaxRate(String(preselectedClient.default_tax_rate))
+      setTaxRate(String(resolveDefaultTaxRate(preselectedClient.default_tax_rate, preselectedClient.country_code, countryRules, vatRegistered)))
       if (preselectedClient.default_bank_account_id) setBankAccountId(preselectedClient.default_bank_account_id)
     }
-  }, [preselectedClient, existing])
+  }, [preselectedClient, existing, countryRules, vatRegistered])
 
   useEffect(() => {
     if (!existing) return
@@ -102,7 +105,7 @@ export function QuoteEditorPage() {
   const handleClientChange = (_clientId: string, selected: Client) => {
     setClient(selected)
     setCurrency(selected.default_currency)
-    setTaxRate(selected.default_tax_rate != null ? String(selected.default_tax_rate) : '0')
+    setTaxRate(String(resolveDefaultTaxRate(selected.default_tax_rate, selected.country_code, countryRules, vatRegistered)))
     setBankAccountId(selected.default_bank_account_id ?? null)
   }
 

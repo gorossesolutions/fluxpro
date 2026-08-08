@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
-import { useBusinessIdentity } from '@/features/parametres/api'
+import { useBusinessIdentity, getLogoDataUrl } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
 import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice, useUpdateQuoteMutableFields } from './api'
@@ -104,9 +104,19 @@ export function QuoteDetailPage() {
         }
       : null
 
+    let logoDataUrl: string | null = null
+    if (businessIdentity.logo_path) {
+      try {
+        logoDataUrl = await getLogoDataUrl(businessIdentity.logo_path)
+      } catch {
+        // Best-effort: a broken/expired signed URL shouldn't block the PDF itself.
+      }
+    }
+
     const { downloadDocumentPdf } = await import('@/lib/pdf/generateDocumentPdf')
     downloadDocumentPdf({
       documentTypeLabel: 'DEVIS',
+      logoDataUrl,
       number: quote.number ?? 'BROUILLON',
       issueDate: quote.issue_date,
       validUntil: quote.valid_until,

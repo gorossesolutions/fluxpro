@@ -20,6 +20,7 @@ import {
   useBusinessIdentity,
   useSaveBusinessIdentity,
   useUploadLogo,
+  useLogoUrl,
   useCreateBankAccount,
   useUpdateBankAccount,
   useDeleteBankAccount,
@@ -44,6 +45,7 @@ function IdentityTab() {
   const { data: identity, isLoading } = useBusinessIdentity()
   const saveIdentity = useSaveBusinessIdentity()
   const uploadLogo = useUploadLogo()
+  const { data: logoUrl, isLoading: logoUrlLoading } = useLogoUrl(identity?.logo_path)
 
   const handleSubmit = async (values: BusinessIdentityFormValues) => {
     try {
@@ -76,6 +78,17 @@ function IdentityTab() {
           <input type="file" accept="image/*" className="sr-only" onChange={(e) => void handleLogoChange(e)} />
         </label>
       </div>
+      {identity?.logo_path && (
+        <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border border-border bg-canvas">
+          {logoUrlLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : logoUrl ? (
+            <img src={logoUrl} alt="Logo de l'entreprise" className="h-full w-full object-contain" />
+          ) : (
+            <span className="px-2 text-center text-xs text-slate">Aperçu indisponible</span>
+          )}
+        </div>
+      )}
       <BusinessIdentityForm
         formId={IDENTITY_FORM_ID}
         onSubmit={handleSubmit}

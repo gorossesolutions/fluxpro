@@ -11,8 +11,9 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
 import { useClient, type Client } from '@/features/clients/api'
-import { useBankAccounts, resolveCountryDefaults, useCountryRules, resolveFxRate } from '@/features/reference/api'
+import { useBankAccounts, resolveCountryDefaults, useCountryRules, resolveFxRate, resolveDefaultTaxRate } from '@/features/reference/api'
 import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
+import { useBusinessIdentity } from '@/features/parametres/api'
 import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
@@ -44,6 +45,8 @@ export function InvoiceEditorPage() {
   const { data: preselectedClient } = useClient(preselectedClientId ?? undefined)
   const { data: bankAccounts = [] } = useBankAccounts()
   const { data: countryRules = [] } = useCountryRules()
+  const { data: businessIdentity } = useBusinessIdentity()
+  const vatRegistered = businessIdentity?.vat_registered ?? false
   const saveDraft = useSaveInvoiceDraft()
   const issueInvoice = useIssueInvoice()
 
@@ -72,10 +75,10 @@ export function InvoiceEditorPage() {
       setClient(preselectedClient)
       setCurrency(preselectedClient.default_currency)
       setPaymentTerms(preselectedClient.default_payment_terms)
-      if (preselectedClient.default_tax_rate != null) setTaxRate(String(preselectedClient.default_tax_rate))
+      setTaxRate(String(resolveDefaultTaxRate(preselectedClient.default_tax_rate, preselectedClient.country_code, countryRules, vatRegistered)))
       if (preselectedClient.default_bank_account_id) setBankAccountId(preselectedClient.default_bank_account_id)
     }
-  }, [preselectedClient, existing])
+  }, [preselectedClient, existing, countryRules, vatRegistered])
 
   // Load an existing draft for editing.
   useEffect(() => {
@@ -126,7 +129,7 @@ export function InvoiceEditorPage() {
     setClient(selected)
     setCurrency(selected.default_currency)
     setPaymentTerms(selected.default_payment_terms)
-    setTaxRate(selected.default_tax_rate != null ? String(selected.default_tax_rate) : '0')
+    setTaxRate(String(resolveDefaultTaxRate(selected.default_tax_rate, selected.country_code, countryRules, vatRegistered)))
     setBankAccountId(selected.default_bank_account_id ?? null)
     setDueDate(addDays(issueDate, selected.default_payment_terms))
     // Reset any manually-edited mention from the previous client so the newly resolved

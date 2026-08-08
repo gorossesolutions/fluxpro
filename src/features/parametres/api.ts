@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
@@ -42,6 +43,24 @@ export function useSaveBusinessIdentity() {
   })
 }
 
+/** Scoped update for just this one field — used by the VAT auto-registration watch (see
+ * useAutoVatRegistration below) so a background flip can't clobber the rest of the identity form
+ * the way reusing useSaveBusinessIdentity's full-row upsert would risk. */
+export function useSetVatRegistered() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (vatRegistered: boolean): Promise<void> => {
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData.user) throw new Error('Not authenticated')
+      const { error } = await supabase.from('business_identity').update({ vat_registered: vatRegistered }).eq('user_id', userData.user.id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.businessIdentity.all })
+    },
+  })
+}
+
 export function useUploadLogo() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -65,6 +84,34 @@ export async function getLogoSignedUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from('logos').createSignedUrl(path, 300)
   if (error) throw error
   return data.signedUrl
+}
+
+/** pdfmake needs the logo's actual bytes inline (a signed URL isn't something it can fetch
+ * itself) — resolves the storage path straight to a data: URL ready to drop into a PDF. */
+export async function getLogoDataUrl(path: string): Promise<string> {
+  const signedUrl = await getLogoSignedUrl(path)
+  const res = await fetch(signedUrl)
+  if (!res.ok) throw new Error(`Impossible de récupérer le logo (HTTP ${res.status})`)
+  const blob = await res.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error ?? new Error('Lecture du logo échouée'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** Backs the Paramètres logo preview (and anything else that wants to just render the current
+ * logo) — re-signs on a shorter cadence than the URL's own 300s validity so the <img> never sits
+ * on an expired link. */
+export function useLogoUrl(logoPath: string | null | undefined) {
+  return useQuery({
+    queryKey: ['logo-url', logoPath],
+    queryFn: () => getLogoSignedUrl(logoPath!),
+    enabled: Boolean(logoPath),
+    staleTime: 4 * 60 * 1000,
+    refetchInterval: 4 * 60 * 1000,
+  })
 }
 
 export function useCreateBankAccount() {
@@ -227,4 +274,32 @@ export function useSaveFxRates() {
       void queryClient.invalidateQueries({ queryKey: ['fx-rates'] })
     },
   })
+}
+
+/** Runs once per authenticated session (mounted in AppLayout): if today's EUR/USD/GBP → MUR
+ * rates aren't in fx_rates yet and an API key is configured, fetches and saves them silently —
+ * so resolveFxRate() has a same-day rate to offer whether or not anyone visits Paramètres first.
+ * This only keeps the *source* data fresh; invoice/quote issuance still freezes whatever rate
+ * was resolved onto the document at that moment (fx_rate_to_mur/fx_rate_date/fx_source), same as
+ * always — a later refresh here never touches an already-issued document. */
+export function useAutoRefreshFxRates() {
+  const { data: settings } = useAppSettings()
+  const { data: todayRates } = useTodayFxRates()
+  const saveFxRates = useSaveFxRates()
+  const attempted = useRef(false)
+
+  useEffect(() => {
+    if (attempted.current) return
+    if (!settings?.exchangerate_api_key || !todayRates) return
+    const hasAllRates = CLIENT_FX_CURRENCIES.every((c) => todayRates[c] != null)
+    if (hasAllRates) return
+    attempted.current = true
+    void fetchClientExchangeRates(settings.exchangerate_api_key)
+      .then((rates) => saveFxRates.mutateAsync(rates))
+      .catch(() => {
+        // Silent by design: Paramètres' "Tester la clé" surfaces the same errors explicitly
+        // when the user is actually looking at that screen; a background refresh failing
+        // shouldn't interrupt whatever page they're on.
+      })
+  }, [settings, todayRates, saveFxRates])
 }
