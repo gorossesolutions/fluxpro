@@ -143,7 +143,7 @@ export function ClientDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => navigate(`/devis/nouveau?client=${client.id}`)}>
             <FileSignature className="h-4 w-4" />
             Nouveau devis
@@ -163,7 +163,7 @@ export function ClientDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="CA total" value={formatMoney(toMinorUnits(String(financials?.ca_total_mur ?? 0)), 'MUR')} state="paid" />
         <KpiCard
           label="Encours"

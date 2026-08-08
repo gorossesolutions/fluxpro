@@ -272,33 +272,55 @@ export function InvoiceDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <h2 className="mb-3 text-sm font-semibold text-slate">Lignes de prestation</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-slate">
-                <th className="pb-2">Titre</th>
-                <th className="pb-2 text-right">Qté</th>
-                <th className="pb-2 text-right">P.U.</th>
-                <th className="pb-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.invoice_lines.map((line) => (
-                <tr key={line.id} className="border-b border-border last:border-0">
-                  <td className="py-2">
-                    <p className="text-ink">{line.title}</p>
-                    {line.description && <p className="text-xs text-slate">{line.description}</p>}
-                  </td>
-                  <td className="tabular-nums py-2 text-right">{line.quantity}</td>
-                  <td className="tabular-nums py-2 text-right">
-                    <CurrencyDisplay amount={toMinorUnits(String(line.unit_price))} currency={invoice.currency} />
-                  </td>
-                  <td className="tabular-nums py-2 text-right">
+
+          {/* Mobile: card list — a 4-column table has no room to breathe under 640px. */}
+          <ul className="flex flex-col gap-3 sm:hidden">
+            {invoice.invoice_lines.map((line) => (
+              <li key={line.id} className="border-b border-border pb-3 last:border-0">
+                <p className="text-ink">{line.title}</p>
+                {line.description && <p className="text-xs text-slate">{line.description}</p>}
+                <div className="mt-1 flex items-center justify-between text-sm text-slate">
+                  <span>
+                    {line.quantity} × <CurrencyDisplay amount={toMinorUnits(String(line.unit_price))} currency={invoice.currency} />
+                  </span>
+                  <span className="tabular-nums font-medium text-ink">
                     <CurrencyDisplay amount={toMinorUnits(String(line.line_total))} currency={invoice.currency} />
-                  </td>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Tablet+: table */}
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-slate">
+                  <th className="pb-2">Titre</th>
+                  <th className="pb-2 text-right">Qté</th>
+                  <th className="pb-2 text-right">P.U.</th>
+                  <th className="pb-2 text-right">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoice.invoice_lines.map((line) => (
+                  <tr key={line.id} className="border-b border-border last:border-0">
+                    <td className="py-2">
+                      <p className="text-ink">{line.title}</p>
+                      {line.description && <p className="text-xs text-slate">{line.description}</p>}
+                    </td>
+                    <td className="tabular-nums py-2 text-right">{line.quantity}</td>
+                    <td className="tabular-nums py-2 text-right">
+                      <CurrencyDisplay amount={toMinorUnits(String(line.unit_price))} currency={invoice.currency} />
+                    </td>
+                    <td className="tabular-nums py-2 text-right">
+                      <CurrencyDisplay amount={toMinorUnits(String(line.line_total))} currency={invoice.currency} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="mt-4 flex flex-col items-end gap-1 text-sm">
             <p>

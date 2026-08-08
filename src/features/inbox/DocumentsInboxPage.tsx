@@ -59,7 +59,7 @@ export function DocumentsInboxPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-ink">Documents</h1>
         <Button variant={showArchived ? 'primary' : 'secondary'} size="sm" onClick={() => setShowArchived((v) => !v)}>
           {showArchived ? 'Voir les documents actifs' : 'Voir les documents archivés'}

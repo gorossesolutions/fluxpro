@@ -68,7 +68,7 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                 value={line.description}
                 onChange={(e) => updateLine(index, { description: e.target.value })}
               />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="mb-1 block text-xs text-slate">Quantité</label>
                   <NumberInput value={line.quantity} onChange={(e) => updateLine(index, { quantity: e.target.value })} />
@@ -81,12 +81,12 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                     onChange={(e) => updateLine(index, { unit_price: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate">Total</label>
-                  <p className="tabular-nums flex h-11 items-center justify-end pr-2 text-sm font-medium text-ink">
-                    {computeLineTotal(line)} {currency}
-                  </p>
-                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate">Total</span>
+                <span className="tabular-nums font-medium text-ink">
+                  {computeLineTotal(line)} {currency}
+                </span>
               </div>
             </div>
             <div className="flex flex-col gap-1">

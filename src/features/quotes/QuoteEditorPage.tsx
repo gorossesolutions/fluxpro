@@ -239,22 +239,22 @@ export function QuoteEditorPage() {
         <LineItemsEditor lines={lines} onChange={setLines} currency={currency} />
       </Card>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface px-4 py-3 sm:left-16 lg:left-60">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-slate">
+      <div className="fixed inset-x-0 bottom-20 z-20 border-t border-border bg-surface px-4 py-3 sm:bottom-0 sm:left-16 lg:left-60">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="whitespace-nowrap text-slate">
               Sous-total: <span className="tabular-nums font-medium text-ink">{formatMoney(subtotalMinor, currency)}</span>
             </span>
             <div className="flex items-center gap-1">
-              <span className="text-slate">Taxe:</span>
+              <span className="whitespace-nowrap text-slate">Taxe:</span>
               <NumberInput className="w-20" disabled={isLocked} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} suffix="%" />
             </div>
-            <span className="text-slate">
+            <span className="whitespace-nowrap text-slate">
               Total: <span className="tabular-nums text-base font-semibold text-ink">{formatMoney(totalMinor, currency)}</span>
             </span>
           </div>
           {!isLocked && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button variant="secondary" onClick={handleSaveDraft} disabled={saveDraft.isPending}>
                 <Save className="h-4 w-4" />
                 Enregistrer comme brouillon
