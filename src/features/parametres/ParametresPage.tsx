@@ -1,11 +1,12 @@
-import { useState } from 'react'
-import { Plus, Star, Pencil, Trash2, Building2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Plus, Star, Pencil, Trash2, Building2, RefreshCw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { NumberInput } from '@/components/ui/NumberInput'
 import { Tabs } from '@/components/ui/Tabs'
 import { Sheet } from '@/components/ui/Sheet'
 import { Select } from '@/components/ui/Select'
-import { NumberInput } from '@/components/ui/NumberInput'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -25,7 +26,13 @@ import {
   useSetDefaultBankAccount,
   useAppSettings,
   useUpdateAppSettings,
+  useTodayFxRates,
+  useSaveFxRates,
+  fetchClientExchangeRates,
+  CLIENT_FX_CURRENCIES,
   type BankAccount,
+  type AppSettings,
+  type ClientFxCurrency,
 } from './api'
 import type { BankAccountFormValues, BusinessIdentityFormValues } from './schema'
 
@@ -259,6 +266,112 @@ function BankAccountsTab() {
   )
 }
 
+const FX_CURRENCY_LABELS: Record<ClientFxCurrency, string> = { EUR: 'EUR → MUR', USD: 'USD → MUR', GBP: 'GBP → MUR' }
+
+/**
+ * Matches V1's own "Taux de change" section exactly (spec: user request, not the build brief —
+ * V1 fetched rates client-side with the user's own ExchangeRate-API key, and this reproduces
+ * that rather than only relying on the server-side fx-snapshot Edge Function). "Tester" fetches
+ * fresh rates with whatever key is currently typed, and only saves the key + rates once that
+ * fetch actually succeeds — a bad key never gets persisted over a working one.
+ */
+function FxRateSection({ settings }: { settings: AppSettings }) {
+  const { push } = useToast()
+  const { data: todayRates, isLoading: loadingRates } = useTodayFxRates()
+  const saveFxRates = useSaveFxRates()
+  const updateSettings = useUpdateAppSettings()
+
+  const [apiKeyInput, setApiKeyInput] = useState(settings.exchangerate_api_key ?? '')
+  const [rateInputs, setRateInputs] = useState<Record<ClientFxCurrency, string>>({ EUR: '', USD: '', GBP: '' })
+  const [testing, setTesting] = useState(false)
+
+  // Seed the rate fields once from whatever's already in fx_rates for today, without fighting
+  // the user's own edits on every refetch — same useRef "applied once" guard as the client-change
+  // preselection fix in InvoiceEditorPage/QuoteEditorPage (a plain effect with todayRates in the
+  // dependency array would re-fire and stomp on in-progress edits every time the query refetches).
+  const seededRates = useRef(false)
+  useEffect(() => {
+    if (seededRates.current || loadingRates) return
+    seededRates.current = true
+    setRateInputs({
+      EUR: todayRates?.EUR != null ? String(todayRates.EUR) : '',
+      USD: todayRates?.USD != null ? String(todayRates.USD) : '',
+      GBP: todayRates?.GBP != null ? String(todayRates.GBP) : '',
+    })
+  }, [todayRates, loadingRates])
+
+  const handleTest = async () => {
+    if (!apiKeyInput.trim()) {
+      push('error', 'Renseigne une clé API')
+      return
+    }
+    setTesting(true)
+    try {
+      const rates = await fetchClientExchangeRates(apiKeyInput.trim())
+      setRateInputs({ EUR: String(rates.EUR), USD: String(rates.USD), GBP: String(rates.GBP) })
+      await Promise.all([
+        updateSettings.mutateAsync({ exchangerate_api_key: apiKeyInput.trim() }),
+        saveFxRates.mutateAsync(rates),
+      ])
+      push('success', 'Taux récupérés et enregistrés')
+    } catch (err) {
+      push('error', getErrorMessage(err))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handleRateBlur = async (currency: ClientFxCurrency) => {
+    const value = Number.parseFloat(rateInputs[currency])
+    if (!Number.isFinite(value) || value <= 0) return
+    try {
+      await saveFxRates.mutateAsync({ [currency]: value })
+    } catch (err) {
+      push('error', `Échec de l'enregistrement : ${getErrorMessage(err)}`)
+    }
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-4 text-sm font-semibold text-ink">Taux de change → MUR</h2>
+
+      <label className="mb-1 block text-sm font-medium text-slate">
+        ExchangeRate-API key <span className="font-normal text-slate/70">(gratuit sur exchangerate-api.com)</span>
+      </label>
+      <div className="flex gap-2">
+        <Input
+          type="password"
+          value={apiKeyInput}
+          onChange={(e) => setApiKeyInput(e.target.value)}
+          className="flex-1"
+          autoComplete="off"
+        />
+        <Button variant="secondary" onClick={() => void handleTest()} disabled={testing}>
+          <RefreshCw className={testing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          {testing ? 'Test…' : 'Tester'}
+        </Button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {CLIENT_FX_CURRENCIES.map((currency) => (
+          <div key={currency}>
+            <label className="mb-1 block text-sm font-medium text-slate">{FX_CURRENCY_LABELS[currency]}</label>
+            <NumberInput
+              value={rateInputs[currency]}
+              onChange={(e) => setRateInputs((prev) => ({ ...prev, [currency]: e.target.value }))}
+              onBlur={() => void handleRateBlur(currency)}
+            />
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-3 text-xs text-slate">
+        Ces taux sont mis à jour automatiquement via l'API. Modifiables manuellement en cas de besoin.
+      </p>
+    </Card>
+  )
+}
+
 function ApplicationTab() {
   const { push } = useToast()
   const { data: settings, isLoading } = useAppSettings()
@@ -277,38 +390,42 @@ function ApplicationTab() {
   }
 
   return (
-    <Card>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Thème</label>
-          <Select value={settings.theme} onChange={(e) => void handleChange({ theme: e.target.value })}>
-            <option value="system">Système</option>
-            <option value="light">Clair</option>
-            <option value="dark">Sombre</option>
-          </Select>
+    <div className="flex flex-col gap-4">
+      <Card>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Thème</label>
+            <Select value={settings.theme} onChange={(e) => void handleChange({ theme: e.target.value })}>
+              <option value="system">Système</option>
+              <option value="light">Clair</option>
+              <option value="dark">Sombre</option>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Densité</label>
+            <Select value={settings.density} onChange={(e) => void handleChange({ density: e.target.value })}>
+              <option value="comfortable">Confortable</option>
+              <option value="compact">Compacte</option>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Intervalle anti-pause (jours)</label>
+            <NumberInput
+              value={String(settings.keepalive_interval_days)}
+              onChange={(e) => {
+                const days = Number.parseInt(e.target.value, 10)
+                if (days >= 1 && days <= 6) void handleChange({ keepalive_interval_days: days })
+              }}
+            />
+            <p className="mt-1 text-xs text-slate">
+              Entre 1 et 6 jours — garde le projet Supabase actif en dessous du délai de pause automatique du plan gratuit.
+            </p>
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Densité</label>
-          <Select value={settings.density} onChange={(e) => void handleChange({ density: e.target.value })}>
-            <option value="comfortable">Confortable</option>
-            <option value="compact">Compacte</option>
-          </Select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate">Intervalle anti-pause (jours)</label>
-          <NumberInput
-            value={String(settings.keepalive_interval_days)}
-            onChange={(e) => {
-              const days = Number.parseInt(e.target.value, 10)
-              if (days >= 1 && days <= 6) void handleChange({ keepalive_interval_days: days })
-            }}
-          />
-          <p className="mt-1 text-xs text-slate">
-            Entre 1 et 6 jours — garde le projet Supabase actif en dessous du délai de pause automatique du plan gratuit.
-          </p>
-        </div>
-      </div>
-    </Card>
+      </Card>
+
+      <FxRateSection settings={settings} />
+    </div>
   )
 }
 

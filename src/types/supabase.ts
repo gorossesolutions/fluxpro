@@ -495,6 +495,7 @@ export interface Database {
           density: string
           keepalive_interval_days: number
           last_heartbeat_at: string | null
+          exchangerate_api_key: string | null
           updated_at: string
         },
         'theme' | 'density' | 'keepalive_interval_days' | 'updated_at'

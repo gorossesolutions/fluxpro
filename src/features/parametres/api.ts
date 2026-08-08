@@ -144,7 +144,9 @@ export function useAppSettings() {
 export function useUpdateAppSettings() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (updates: Partial<Pick<AppSettings, 'theme' | 'density' | 'keepalive_interval_days'>>): Promise<AppSettings> => {
+    mutationFn: async (
+      updates: Partial<Pick<AppSettings, 'theme' | 'density' | 'keepalive_interval_days' | 'exchangerate_api_key'>>,
+    ): Promise<AppSettings> => {
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error('Not authenticated')
       const { data, error } = await supabase.from('app_settings').update(updates).eq('user_id', userData.user.id).select().single()
@@ -153,6 +155,76 @@ export function useUpdateAppSettings() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['app-settings'] })
+    },
+  })
+}
+
+/** Matches V1's own "Taux de change" widget exactly (EUR/USD/GBP only) — a deliberately
+ * simpler, client-side alternative to the fx-snapshot Edge Function (0010_...): the user's own
+ * ExchangeRate-API key lives in app_settings and every fetch happens straight from the
+ * browser, no server involved. Both mechanisms write into the same fx_rates table that
+ * resolveFxRate() reads from, so either one (or both) keeps invoice/quote FX resolution fed. */
+export const CLIENT_FX_CURRENCIES = ['EUR', 'USD', 'GBP'] as const
+export type ClientFxCurrency = (typeof CLIENT_FX_CURRENCIES)[number]
+
+/** Three plain GETs (v6.exchangerate-api.com/v6/{key}/latest/{base}), one per tracked
+ * currency — same shape of call the fx-snapshot Edge Function makes server-side, just run
+ * here instead. Throws with a message safe to show directly in a toast (never leaks the key
+ * itself back into an error string). */
+export async function fetchClientExchangeRates(apiKey: string): Promise<Record<ClientFxCurrency, number>> {
+  const entries = await Promise.all(
+    CLIENT_FX_CURRENCIES.map(async (currency) => {
+      const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${currency}`)
+      if (!res.ok) throw new Error(`${currency} : requête échouée (HTTP ${res.status}) — vérifie la clé API`)
+      const json = await res.json()
+      if (json?.result === 'error') {
+        throw new Error(`${currency} : ${json['error-type'] ?? 'erreur inconnue'} — vérifie la clé API`)
+      }
+      const rate = json?.conversion_rates?.MUR
+      if (typeof rate !== 'number') throw new Error(`${currency} : aucun taux MUR dans la réponse`)
+      return [currency, rate] as const
+    }),
+  )
+  return Object.fromEntries(entries) as Record<ClientFxCurrency, number>
+}
+
+export function useTodayFxRates() {
+  return useQuery({
+    queryKey: ['fx-rates', 'today'],
+    queryFn: async (): Promise<Partial<Record<ClientFxCurrency, number>>> => {
+      const today = new Date().toISOString().slice(0, 10)
+      const { data, error } = await supabase
+        .from('fx_rates')
+        .select('base_currency, rate')
+        .eq('quote_currency', 'MUR')
+        .eq('rate_date', today)
+        .in('base_currency', CLIENT_FX_CURRENCIES as unknown as string[])
+      if (error) throw error
+      return Object.fromEntries(data.map((r) => [r.base_currency, r.rate]))
+    },
+  })
+}
+
+export function useSaveFxRates() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (rates: Partial<Record<ClientFxCurrency, number>>): Promise<void> => {
+      const today = new Date().toISOString().slice(0, 10)
+      const rows = Object.entries(rates)
+        .filter((entry): entry is [ClientFxCurrency, number] => entry[1] != null)
+        .map(([currency, rate]) => ({
+          rate_date: today,
+          base_currency: currency,
+          quote_currency: 'MUR',
+          rate,
+          source: 'exchangerate-api-manual',
+        }))
+      if (rows.length === 0) return
+      const { error } = await supabase.from('fx_rates').upsert(rows, { onConflict: 'rate_date,base_currency,quote_currency' })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['fx-rates'] })
     },
   })
 }
