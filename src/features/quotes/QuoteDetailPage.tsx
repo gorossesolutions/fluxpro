@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Modal } from '@/components/ui/Modal'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
@@ -15,7 +16,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { useBusinessIdentity } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
-import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice } from './api'
+import { useQuote, useAcceptQuote, useRefuseQuote, useConvertQuoteToInvoice, useUpdateQuoteMutableFields } from './api'
 import { QuoteEditorPage } from './QuoteEditorPage'
 
 const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
@@ -36,8 +37,12 @@ export function QuoteDetailPage() {
   const acceptQuote = useAcceptQuote()
   const refuseQuote = useRefuseQuote()
   const convertToInvoice = useConvertQuoteToInvoice()
+  const updateMutableFields = useUpdateQuoteMutableFields()
   const [acceptOpen, setAcceptOpen] = useState(false)
   const [acceptanceNote, setAcceptanceNote] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
+  const [editValidUntil, setEditValidUntil] = useState('')
+  const [editNotes, setEditNotes] = useState('')
 
   if (isLoading || !quote) return <Skeleton className="h-96 w-full" />
 
@@ -45,6 +50,22 @@ export function QuoteDetailPage() {
 
   const statusInfo = STATUS_LABELS[quote.status] ?? STATUS_LABELS.draft!
   const totalMinor = toMinorUnits(String(quote.total))
+
+  const handleOpenEdit = () => {
+    setEditValidUntil(quote.valid_until ?? '')
+    setEditNotes(quote.notes ?? '')
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      await updateMutableFields.mutateAsync({ id: quote.id, valid_until: editValidUntil || null, notes: editNotes || null })
+      setEditOpen(false)
+      push('success', 'Devis mis à jour')
+    } catch (err) {
+      push('error', `Échec : ${getErrorMessage(err)}`)
+    }
+  }
 
   const handleConvert = async () => {
     try {
@@ -127,8 +148,14 @@ export function QuoteDetailPage() {
               <h1 className="text-xl font-semibold text-ink">{quote.number}</h1>
               <Badge state={statusInfo.state} label={statusInfo.label} />
             </div>
-            <p className="text-sm text-slate">
-              {(quote.client_snapshot as { name?: string })?.name} — <DateDisplay date={quote.issue_date} />
+            <p className="text-sm text-slate">{(quote.client_snapshot as { name?: string })?.name}</p>
+            <p className="mt-0.5 flex flex-wrap gap-x-4 text-xs text-slate">
+              <span>
+                Émis le <DateDisplay date={quote.issue_date} />
+              </span>
+              <span>
+                Valide jusqu'au {quote.valid_until ? <DateDisplay date={quote.valid_until} /> : '—'}
+              </span>
             </p>
           </div>
         </div>
@@ -156,6 +183,10 @@ export function QuoteDetailPage() {
               Voir la facture
             </Button>
           )}
+          <Button variant="secondary" onClick={handleOpenEdit}>
+            <Pencil className="h-4 w-4" />
+            Modifier
+          </Button>
           <Button variant="secondary" onClick={handleDownloadPdf}>
             <Download className="h-4 w-4" />
             Télécharger PDF
@@ -193,10 +224,32 @@ export function QuoteDetailPage() {
           </tbody>
         </table>
         <div className="mt-4 flex flex-col items-end gap-1 text-sm">
+          <p>
+            Sous-total: <CurrencyDisplay amount={toMinorUnits(String(quote.subtotal))} currency={quote.currency} />
+          </p>
+          <p>
+            Taxe ({quote.tax_rate}%): <CurrencyDisplay amount={toMinorUnits(String(quote.tax_amount))} currency={quote.currency} />
+          </p>
           <p className="text-base font-semibold text-ink">
             Total: <CurrencyDisplay amount={totalMinor} currency={quote.currency} />
           </p>
         </div>
+
+        {quote.country_mention && (
+          <p className="mt-4 rounded-lg bg-canvas p-3 text-xs text-slate">{quote.country_mention}</p>
+        )}
+        {quote.currency !== 'MUR' && (
+          <p className="mt-2 text-xs text-slate">
+            1 {quote.currency} = {quote.fx_rate_to_mur} Rs au <DateDisplay date={quote.fx_rate_date ?? quote.issue_date} /> (
+            {quote.fx_source})
+          </p>
+        )}
+        {quote.notes && (
+          <div className="mt-4">
+            <h3 className="mb-1 text-sm font-semibold text-slate">Notes</h3>
+            <p className="whitespace-pre-wrap text-sm text-ink">{quote.notes}</p>
+          </div>
+        )}
         {quote.acceptance_note && (
           <p className="mt-4 rounded-lg bg-blue-pale p-3 text-sm text-blue">Note d'acceptation : {quote.acceptance_note}</p>
         )}
@@ -225,6 +278,36 @@ export function QuoteDetailPage() {
       >
         <label className="mb-1 block text-sm font-medium text-slate">Note / référence bon de commande (optionnel)</label>
         <Textarea rows={3} value={acceptanceNote} onChange={(e) => setAcceptanceNote(e.target.value)} />
+      </Modal>
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Modifier le devis"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateMutableFields.isPending}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-slate">
+            Un devis envoyé est verrouillé : seuls la validité et les notes restent modifiables.
+          </p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Valide jusqu'au</label>
+            <DatePicker value={editValidUntil} onChange={(e) => setEditValidUntil(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Notes</label>
+            <Textarea rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+          </div>
+        </div>
       </Modal>
     </div>
   )

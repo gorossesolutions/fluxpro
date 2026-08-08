@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
@@ -67,9 +68,8 @@ export function LoginPage() {
                 <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate">
                   Mot de passe
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

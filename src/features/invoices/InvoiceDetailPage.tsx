@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Copy, FileMinus, Download, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -8,13 +8,16 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Modal } from '@/components/ui/Modal'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { subMoney, sumMoney, toMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useBusinessIdentity } from '@/features/parametres/api'
 import { useBankAccounts } from '@/features/reference/api'
 import type { PdfParty, PdfBankAccount } from '@/lib/pdf/generateDocumentPdf'
-import { useInvoice, useInvoicePayments, useSaveInvoiceDraft, useCreditNotesForInvoice } from './api'
+import { useInvoice, useInvoicePayments, useSaveInvoiceDraft, useUpdateInvoiceMutableFields, useCreditNotesForInvoice } from './api'
 import { InvoiceEditorPage } from './InvoiceEditorPage'
 import { PaymentModal } from './PaymentModal'
 import { CreditNoteModal } from './CreditNoteModal'
@@ -37,8 +40,12 @@ export function InvoiceDetailPage() {
   const { data: businessIdentity } = useBusinessIdentity()
   const { data: bankAccounts = [] } = useBankAccounts()
   const saveDraft = useSaveInvoiceDraft()
+  const updateMutableFields = useUpdateInvoiceMutableFields()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [creditNoteOpen, setCreditNoteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editDueDate, setEditDueDate] = useState('')
+  const [editNotes, setEditNotes] = useState('')
 
   if (isLoading || !invoice) {
     return <Skeleton className="h-96 w-full" />
@@ -57,6 +64,22 @@ export function InvoiceDetailPage() {
   const handleMarkPaid = async () => {
     // "Marquer comme payée" quick action = a full payment for the outstanding balance.
     setPaymentOpen(true)
+  }
+
+  const handleOpenEdit = () => {
+    setEditDueDate(invoice.due_date ?? '')
+    setEditNotes(invoice.notes ?? '')
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      await updateMutableFields.mutateAsync({ id: invoice.id, due_date: editDueDate || null, notes: editNotes || null })
+      setEditOpen(false)
+      push('success', 'Facture mise à jour')
+    } catch (err) {
+      push('error', `Échec : ${getErrorMessage(err)}`)
+    }
   }
 
   const handleDuplicate = async () => {
@@ -203,8 +226,14 @@ export function InvoiceDetailPage() {
               <h1 className="text-xl font-semibold text-ink">{invoice.number}</h1>
               <Badge state={statusInfo.state} label={statusInfo.label} />
             </div>
-            <p className="text-sm text-slate">
-              {(invoice.client_snapshot as { name?: string })?.name} — <DateDisplay date={invoice.issue_date} />
+            <p className="text-sm text-slate">{(invoice.client_snapshot as { name?: string })?.name}</p>
+            <p className="mt-0.5 flex flex-wrap gap-x-4 text-xs text-slate">
+              <span>
+                Émise le <DateDisplay date={invoice.issue_date} />
+              </span>
+              <span>
+                Échéance {invoice.due_date ? <DateDisplay date={invoice.due_date} /> : '—'}
+              </span>
             </p>
           </div>
         </div>
@@ -221,6 +250,10 @@ export function InvoiceDetailPage() {
               </Button>
             </>
           )}
+          <Button variant="secondary" onClick={handleOpenEdit}>
+            <Pencil className="h-4 w-4" />
+            Modifier
+          </Button>
           <Button variant="secondary" onClick={handleDuplicate}>
             <Copy className="h-4 w-4" />
             Dupliquer
@@ -318,6 +351,13 @@ export function InvoiceDetailPage() {
             )}
           </Card>
 
+          {invoice.notes && (
+            <Card>
+              <h2 className="mb-2 text-sm font-semibold text-slate">Notes</h2>
+              <p className="whitespace-pre-wrap text-sm text-ink">{invoice.notes}</p>
+            </Card>
+          )}
+
           {creditNotes.length > 0 && (
             <Card>
               <h2 className="mb-2 text-sm font-semibold text-slate">Avoirs</h2>
@@ -345,6 +385,36 @@ export function InvoiceDetailPage() {
 
       <PaymentModal open={paymentOpen} onClose={() => setPaymentOpen(false)} invoice={invoice} outstandingMinor={outstandingMinor} />
       <CreditNoteModal open={creditNoteOpen} onClose={() => setCreditNoteOpen(false)} invoice={invoice} />
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Modifier la facture"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateMutableFields.isPending}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-slate">
+            Une facture émise est verrouillée : seuls l'échéance et les notes restent modifiables.
+          </p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Échéance</label>
+            <DatePicker value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate">Notes</label>
+            <Textarea rows={4} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

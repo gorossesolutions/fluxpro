@@ -159,6 +159,30 @@ export function useIssueQuote() {
   })
 }
 
+export interface UpdateQuoteMutableFieldsInput {
+  id: string
+  valid_until: string | null
+  notes: string | null
+}
+
+/** Mirrors useUpdateInvoiceMutableFields — valid_until and notes stay whitelisted-mutable on a
+ * locked quote (fn_guard_quote_immutability, 0005_quote_locking.sql) even though the core
+ * financial/identity fields don't. Touches only the quote row, never quote_lines. */
+export function useUpdateQuoteMutableFields() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, valid_until, notes }: UpdateQuoteMutableFieldsInput): Promise<Quote> => {
+      const { data, error } = await supabase.from('quotes').update({ valid_until, notes }).eq('id', id).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.detail(variables.id) })
+    },
+  })
+}
+
 export interface AcceptQuoteInput {
   id: string
   acceptanceNote?: string

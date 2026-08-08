@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, Star, Pencil, Trash2, Building2, RefreshCw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Tabs } from '@/components/ui/Tabs'
 import { Sheet } from '@/components/ui/Sheet'
@@ -339,8 +339,7 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
         ExchangeRate-API key <span className="font-normal text-slate/70">(gratuit sur exchangerate-api.com)</span>
       </label>
       <div className="flex gap-2">
-        <Input
-          type="password"
+        <PasswordInput
           value={apiKeyInput}
           onChange={(e) => setApiKeyInput(e.target.value)}
           className="flex-1"

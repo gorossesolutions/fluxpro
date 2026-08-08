@@ -24,6 +24,16 @@ export interface OverdueInvoice {
   daysOverdue: number
 }
 
+function addDaysIso(date: string, days: number): string {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Migrated invoices whose source CSV had a blank "Échéance" cell have due_date = null
+ * (scripts/lib/csv-source.ts) — falling back to issue_date + payment_terms mirrors how
+ * due_date gets computed for every invoice created in the app itself (InvoiceEditorPage),
+ * so those rows still show up here instead of being silently excluded forever. */
 export function useOverdueInvoices() {
   return useQuery({
     queryKey: ['rappels', 'overdue-invoices'],
@@ -31,18 +41,21 @@ export function useOverdueInvoices() {
       const today = new Date().toISOString().slice(0, 10)
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, number, client_snapshot, due_date, total, currency, fx_rate_to_mur')
+        .select('id, number, client_snapshot, due_date, issue_date, payment_terms, total, currency, fx_rate_to_mur')
         .in('status', ['issued', 'overdue'])
-        .not('due_date', 'is', null)
-        .lt('due_date', today)
-        .order('due_date')
       if (error) throw error
 
-      return data.map((inv) => ({
-        ...inv,
-        due_date: inv.due_date!,
-        daysOverdue: Math.floor((Date.now() - new Date(inv.due_date!).getTime()) / 86_400_000),
-      }))
+      return data
+        .map((inv) => {
+          const effectiveDueDate = inv.due_date ?? addDaysIso(inv.issue_date, inv.payment_terms)
+          return {
+            ...inv,
+            due_date: effectiveDueDate,
+            daysOverdue: Math.floor((Date.now() - new Date(effectiveDueDate).getTime()) / 86_400_000),
+          }
+        })
+        .filter((inv) => inv.due_date < today)
+        .sort((a, b) => a.due_date.localeCompare(b.due_date))
     },
   })
 }

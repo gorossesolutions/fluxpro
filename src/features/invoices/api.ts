@@ -261,6 +261,32 @@ export function useIssueInvoice() {
   })
 }
 
+export interface UpdateInvoiceMutableFieldsInput {
+  id: string
+  due_date: string | null
+  notes: string | null
+}
+
+/** Locked invoices reject writes to their financial/identity fields (trg_invoice_lines_immutability
+ * + fn_guard_invoice_immutability, 0003_functions.sql) — but due_date and notes are explicitly
+ * whitelisted as still-mutable even once locked. This touches only the invoice row, never
+ * invoice_lines, so it works on both draft and locked invoices unlike useSaveInvoiceDraft
+ * (which always deletes+reinserts every line and would be rejected on a locked document). */
+export function useUpdateInvoiceMutableFields() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, due_date, notes }: UpdateInvoiceMutableFieldsInput): Promise<Invoice> => {
+      const { data, error } = await supabase.from('invoices').update({ due_date, notes }).eq('id', id).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.detail(variables.id) })
+    },
+  })
+}
+
 export function useDeleteInvoiceDraft() {
   const queryClient = useQueryClient()
   return useMutation({
