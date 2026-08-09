@@ -18,7 +18,7 @@ interface LineItemsEditorProps {
 }
 
 export function emptyLine(): EditableLine {
-  return { title: '', description: '', quantity: '1', unit_price: '0.00' }
+  return { title: '', description: '', quantity: '', unit_price: '' }
 }
 
 export function computeLineTotal(line: EditableLine): string {
@@ -37,20 +37,6 @@ export function computeSubtotal(lines: EditableLine[]): string {
 export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorProps) {
   const updateLine = (index: number, patch: Partial<EditableLine>) => {
     onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)))
-  }
-
-  // Quantité/Prix unitaire are re-typed from scratch far more often than fine-edited, so the
-  // existing value clears itself on focus instead of making the user select-all/backspace it
-  // first — restored on blur if they click away without typing a replacement.
-  const handleNumberFocus = (e: React.FocusEvent<HTMLInputElement>, index: number, field: 'quantity' | 'unit_price') => {
-    e.currentTarget.dataset.prevValue = lines[index]?.[field] ?? ''
-    updateLine(index, { [field]: '' })
-  }
-
-  const handleNumberBlur = (e: React.FocusEvent<HTMLInputElement>, index: number, field: 'quantity' | 'unit_price', fallback: string) => {
-    if ((lines[index]?.[field] ?? '').trim() === '') {
-      updateLine(index, { [field]: e.currentTarget.dataset.prevValue || fallback })
-    }
   }
 
   const removeLine = (index: number) => {
@@ -88,9 +74,8 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                   <NumberInput
                     id={`line-quantity-${index}`}
                     value={line.quantity}
+                    placeholder="1"
                     onChange={(e) => updateLine(index, { quantity: e.target.value })}
-                    onFocus={(e) => handleNumberFocus(e, index, 'quantity')}
-                    onBlur={(e) => handleNumberBlur(e, index, 'quantity', '1')}
                   />
                 </div>
                 <div>
@@ -98,10 +83,9 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                   <NumberInput
                     id={`line-unit-price-${index}`}
                     value={line.unit_price}
+                    placeholder="1000"
                     suffix={currency}
                     onChange={(e) => updateLine(index, { unit_price: e.target.value })}
-                    onFocus={(e) => handleNumberFocus(e, index, 'unit_price')}
-                    onBlur={(e) => handleNumberBlur(e, index, 'unit_price', '0.00')}
                   />
                 </div>
               </div>

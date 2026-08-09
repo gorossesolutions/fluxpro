@@ -60,7 +60,7 @@ export function InvoiceEditorPage() {
   const [paymentTerms, setPaymentTerms] = useState(30)
   const [bankAccountId, setBankAccountId] = useState<string | null>(null)
   const [currency, setCurrency] = useState('EUR')
-  const [taxRate, setTaxRate] = useState('0')
+  const [taxRate, setTaxRate] = useState('')
   const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
   const [notes, setNotes] = useState('')
   const [mentionOverride, setMentionOverride] = useState<string | null>(null)
@@ -398,6 +398,7 @@ export function InvoiceEditorPage() {
                 className="w-20"
                 disabled={isLocked}
                 value={taxRate}
+                placeholder="0"
                 onChange={(e) => setTaxRate(e.target.value)}
                 suffix="%"
               />

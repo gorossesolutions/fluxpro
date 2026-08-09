@@ -53,7 +53,7 @@ export function QuoteEditorPage() {
   const [validUntil, setValidUntil] = useState(addDays(new Date().toISOString().slice(0, 10), 30))
   const [bankAccountId, setBankAccountId] = useState<string | null>(null)
   const [currency, setCurrency] = useState('EUR')
-  const [taxRate, setTaxRate] = useState('0')
+  const [taxRate, setTaxRate] = useState('')
   const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
   const [notes, setNotes] = useState('')
 
@@ -277,7 +277,14 @@ export function QuoteEditorPage() {
             </span>
             <div className="flex items-center gap-1">
               <span className="whitespace-nowrap text-slate">Taxe:</span>
-              <NumberInput className="w-20" disabled={isLocked} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} suffix="%" />
+              <NumberInput
+                className="w-20"
+                disabled={isLocked}
+                value={taxRate}
+                placeholder="0"
+                onChange={(e) => setTaxRate(e.target.value)}
+                suffix="%"
+              />
             </div>
             <span className="whitespace-nowrap text-slate">
               Total: <span className="tabular-nums text-base font-semibold text-ink">{formatMoney(totalMinor, currency)}</span>
