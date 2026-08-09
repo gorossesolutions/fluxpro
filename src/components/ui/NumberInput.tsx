@@ -23,7 +23,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
           'tabular-nums h-11 w-full rounded-lg border bg-surface px-3 text-right text-base text-ink',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue',
           invalid ? 'border-overdue' : 'border-border',
-          suffix && 'pr-10',
+          suffix && 'pr-16',
           className,
         )}
         {...props}

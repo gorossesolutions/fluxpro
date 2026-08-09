@@ -39,6 +39,20 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
     onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)))
   }
 
+  // Quantité/Prix unitaire are re-typed from scratch far more often than fine-edited, so the
+  // existing value clears itself on focus instead of making the user select-all/backspace it
+  // first — restored on blur if they click away without typing a replacement.
+  const handleNumberFocus = (e: React.FocusEvent<HTMLInputElement>, index: number, field: 'quantity' | 'unit_price') => {
+    e.currentTarget.dataset.prevValue = lines[index]?.[field] ?? ''
+    updateLine(index, { [field]: '' })
+  }
+
+  const handleNumberBlur = (e: React.FocusEvent<HTMLInputElement>, index: number, field: 'quantity' | 'unit_price', fallback: string) => {
+    if ((lines[index]?.[field] ?? '').trim() === '') {
+      updateLine(index, { [field]: e.currentTarget.dataset.prevValue || fallback })
+    }
+  }
+
   const removeLine = (index: number) => {
     if (lines.length <= 1) return
     onChange(lines.filter((_, i) => i !== index))
@@ -75,6 +89,8 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                     id={`line-quantity-${index}`}
                     value={line.quantity}
                     onChange={(e) => updateLine(index, { quantity: e.target.value })}
+                    onFocus={(e) => handleNumberFocus(e, index, 'quantity')}
+                    onBlur={(e) => handleNumberBlur(e, index, 'quantity', '1')}
                   />
                 </div>
                 <div>
@@ -84,6 +100,8 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                     value={line.unit_price}
                     suffix={currency}
                     onChange={(e) => updateLine(index, { unit_price: e.target.value })}
+                    onFocus={(e) => handleNumberFocus(e, index, 'unit_price')}
+                    onBlur={(e) => handleNumberBlur(e, index, 'unit_price', '0.00')}
                   />
                 </div>
               </div>
