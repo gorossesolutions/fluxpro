@@ -17,6 +17,12 @@ RLS is the **ownership** boundary (`user_id = auth.uid()`); triggers are the **c
 boundary (an issued invoice cannot be altered even by its owner). They're deliberately separate
 layers — don't fold one into the other.
 
+**Multi-tenancy note:** today's `user_id = auth.uid()` model gives full isolation between separate
+Supabase Auth users (useful as-is for entirely separate companies) but has no concept of roles or of
+one user sharing access to their data with another. The product direction is multi-org with
+role-based access — see `CLAUDE.md` at the repo root before making schema/RLS changes that would
+make that retrofit harder than necessary.
+
 ## Table groups
 
 - **Identity**: `profiles`, `business_identity`, `bank_accounts`, `app_settings`. One row per
