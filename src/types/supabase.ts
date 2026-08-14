@@ -551,6 +551,14 @@ export interface Database {
         Args: { p_id: string }
         Returns: undefined
       }
+      fn_replace_invoice_lines: {
+        Args: { p_invoice_id: string; p_lines: unknown }
+        Returns: undefined
+      }
+      fn_replace_quote_lines: {
+        Args: { p_quote_id: string; p_lines: unknown }
+        Returns: undefined
+      }
     }
     Enums: {
       identifier_type: IdentifierType

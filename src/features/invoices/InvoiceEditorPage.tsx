@@ -53,6 +53,13 @@ export function InvoiceEditorPage() {
   const issueInvoice = useIssueInvoice()
   const deleteDraft = useDeleteInvoiceDraft()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  // Belt-and-suspenders against a fast double-tap: the Button's disabled={mutation.isPending}
+  // only takes effect once React re-renders, which can lose a race against two click events
+  // fired back-to-back on a touchscreen. This ref is synchronous, so it blocks re-entry
+  // immediately regardless of render timing (the real fix for duplicated lines is the atomic
+  // fn_replace_invoice_lines RPC, 0020_atomic_line_replace.sql — this just avoids the wasted
+  // duplicate request in the first place).
+  const submittingRef = useRef(false)
 
   const [client, setClient] = useState<Client | null>(null)
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10))
@@ -177,16 +184,21 @@ export function InvoiceEditorPage() {
   })
 
   const handleSaveDraft = async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     try {
       const saved = await saveDraft.mutateAsync(buildPayload())
       push('success', 'Facture enregistrée comme brouillon')
       if (!existing) navigate(`/factures/${saved.id}`, { replace: true })
     } catch (err) {
       push('error', `Échec de l'enregistrement : ${getErrorMessage(err)}`)
+    } finally {
+      submittingRef.current = false
     }
   }
 
   const handleIssue = async () => {
+    if (submittingRef.current) return
     const missing: string[] = []
     if (!client) missing.push('Sélectionne un client')
     if (!client?.address_line1 && client) missing.push("Adresse du client manquante")
@@ -197,6 +209,7 @@ export function InvoiceEditorPage() {
       return
     }
 
+    submittingRef.current = true
     try {
       const saved = existing ?? (await saveDraft.mutateAsync(buildPayload()))
       const fx = await resolveFxRate(currency, issueDate)
@@ -216,6 +229,8 @@ export function InvoiceEditorPage() {
       navigate(`/factures/${saved.id}`, { replace: true })
     } catch (err) {
       push('error', `Échec de l'émission : ${getErrorMessage(err)}`)
+    } finally {
+      submittingRef.current = false
     }
   }
 

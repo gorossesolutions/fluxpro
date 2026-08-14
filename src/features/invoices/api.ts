@@ -189,7 +189,6 @@ export function useSaveInvoiceDraft() {
         const { data, error } = await supabase.from('invoices').update(updates).eq('id', id).select().single()
         if (error) throw error
         invoiceRow = data
-        await supabase.from('invoice_lines').delete().eq('invoice_id', invoiceRow.id)
       } else {
         const { data, error } = await supabase
           .from('invoices')
@@ -200,12 +199,14 @@ export function useSaveInvoiceDraft() {
         invoiceRow = data
       }
 
-      if (lines.length > 0) {
-        const { error: linesError } = await supabase
-          .from('invoice_lines')
-          .insert(lines.map((line, i) => ({ ...line, invoice_id: invoiceRow.id, position: i + 1 })))
-        if (linesError) throw linesError
-      }
+      // Single RPC (one transaction) rather than a separate delete-then-insert: two
+      // independently-committed REST calls left a window where a fast double-tap could fire
+      // this mutation twice and have both inserts land, doubling every line (0020_atomic_line_replace.sql).
+      const { error: linesError } = await supabase.rpc('fn_replace_invoice_lines', {
+        p_invoice_id: invoiceRow.id,
+        p_lines: lines,
+      })
+      if (linesError) throw linesError
 
       return invoiceRow
     },

@@ -47,6 +47,9 @@ export function QuoteEditorPage() {
   const issueQuote = useIssueQuote()
   const deleteQuote = useDeleteQuote()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  // Belt-and-suspenders against a fast double-tap: see the identical comment in
+  // InvoiceEditorPage.tsx / 0020_atomic_line_replace.sql.
+  const submittingRef = useRef(false)
 
   const [client, setClient] = useState<Client | null>(null)
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10))
@@ -149,20 +152,26 @@ export function QuoteEditorPage() {
   })
 
   const handleSaveDraft = async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     try {
       const saved = await saveDraft.mutateAsync(buildPayload())
       push('success', 'Devis enregistré comme brouillon')
       if (!existing) navigate(`/devis/${saved.id}`, { replace: true })
     } catch (err) {
       push('error', `Échec : ${getErrorMessage(err)}`)
+    } finally {
+      submittingRef.current = false
     }
   }
 
   const handleSend = async () => {
+    if (submittingRef.current) return
     if (!client) {
       push('error', 'Sélectionne un client avant d\'envoyer le devis')
       return
     }
+    submittingRef.current = true
     try {
       const saved = existing ?? (await saveDraft.mutateAsync(buildPayload()))
       await saveDraft.mutateAsync({ ...buildPayload(), quote: { ...buildPayload().quote, id: saved.id } })
@@ -171,6 +180,8 @@ export function QuoteEditorPage() {
       navigate(`/devis/${saved.id}`, { replace: true })
     } catch (err) {
       push('error', `Échec : ${getErrorMessage(err)}`)
+    } finally {
+      submittingRef.current = false
     }
   }
 

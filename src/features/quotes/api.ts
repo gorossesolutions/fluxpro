@@ -101,7 +101,6 @@ export function useSaveQuoteDraft() {
         const { data, error } = await supabase.from('quotes').update(updates).eq('id', id).select().single()
         if (error) throw error
         quoteRow = data
-        await supabase.from('quote_lines').delete().eq('quote_id', quoteRow.id)
       } else {
         const { data, error } = await supabase
           .from('quotes')
@@ -112,12 +111,14 @@ export function useSaveQuoteDraft() {
         quoteRow = data
       }
 
-      if (lines.length > 0) {
-        const { error: linesError } = await supabase
-          .from('quote_lines')
-          .insert(lines.map((line, i) => ({ ...line, quote_id: quoteRow.id, position: i + 1 })))
-        if (linesError) throw linesError
-      }
+      // Single RPC (one transaction) rather than a separate delete-then-insert: two
+      // independently-committed REST calls left a window where a fast double-tap could fire
+      // this mutation twice and have both inserts land, doubling every line (0020_atomic_line_replace.sql).
+      const { error: linesError } = await supabase.rpc('fn_replace_quote_lines', {
+        p_quote_id: quoteRow.id,
+        p_lines: lines,
+      })
+      if (linesError) throw linesError
 
       return quoteRow
     },
