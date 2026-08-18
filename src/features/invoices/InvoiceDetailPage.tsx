@@ -11,6 +11,7 @@ import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -27,6 +28,7 @@ import {
   useCancelInvoice,
   useCreditNotesForInvoice,
 } from './api'
+import { PAYMENT_TERMS_PRESETS, addDays } from './paymentTerms'
 import { InvoiceEditorPage } from './InvoiceEditorPage'
 import { PaymentModal } from './PaymentModal'
 import { CreditNoteModal } from './CreditNoteModal'
@@ -56,6 +58,7 @@ export function InvoiceDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [editDueDate, setEditDueDate] = useState('')
   const [editNotes, setEditNotes] = useState('')
+  const [editPaymentTerms, setEditPaymentTerms] = useState(30)
   const [cancelOpen, setCancelOpen] = useState(false)
 
   if (isLoading) {
@@ -90,12 +93,18 @@ export function InvoiceDetailPage() {
   const handleOpenEdit = () => {
     setEditDueDate(invoice.due_date ?? '')
     setEditNotes(invoice.notes ?? '')
+    setEditPaymentTerms(invoice.payment_terms)
     setEditOpen(true)
   }
 
   const handleSaveEdit = async () => {
     try {
-      await updateMutableFields.mutateAsync({ id: invoice.id, due_date: editDueDate || null, notes: editNotes || null })
+      await updateMutableFields.mutateAsync({
+        id: invoice.id,
+        due_date: editDueDate || null,
+        notes: editNotes || null,
+        payment_terms: editPaymentTerms,
+      })
       setEditOpen(false)
       push('success', 'Facture mise à jour')
     } catch (err) {
@@ -463,8 +472,30 @@ export function InvoiceDetailPage() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-xs text-slate">
-            Une facture émise est verrouillée : seuls l'échéance et les notes restent modifiables.
+            Une facture émise est verrouillée : seuls les conditions de paiement, l'échéance et les notes restent
+            modifiables.
           </p>
+          <div>
+            <label htmlFor="inv_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement</label>
+            <Select
+              id="inv_payment_terms"
+              value={editPaymentTerms}
+              onChange={(e) => {
+                const days = Number(e.target.value)
+                setEditPaymentTerms(days)
+                setEditDueDate(addDays(invoice.issue_date, days))
+              }}
+            >
+              {!PAYMENT_TERMS_PRESETS.some((p) => p.days === editPaymentTerms) && (
+                <option value={editPaymentTerms}>Personnalisé ({editPaymentTerms} jours)</option>
+              )}
+              {PAYMENT_TERMS_PRESETS.map((p) => (
+                <option key={p.days} value={p.days}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
+          </div>
           <div>
             <label htmlFor="inv_due_date" className="mb-1 block text-sm font-medium text-slate">Échéance</label>
             <DatePicker id="inv_due_date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />

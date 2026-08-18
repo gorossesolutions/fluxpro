@@ -20,21 +20,9 @@ import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useInvoice, useIssueInvoice, useSaveInvoiceDraft, useDeleteInvoiceDraft } from './api'
+import { PAYMENT_TERMS_PRESETS, addDays } from './paymentTerms'
 
 const CURRENCIES = ['MUR', 'EUR', 'USD', 'GBP', 'ZAR', 'CAD']
-const PAYMENT_TERMS_PRESETS = [
-  { label: 'À réception', days: 0 },
-  { label: '15 jours', days: 15 },
-  { label: '30 jours', days: 30 },
-  { label: '45 jours', days: 45 },
-  { label: '60 jours', days: 60 },
-]
-
-function addDays(date: string, days: number): string {
-  const d = new Date(date)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
 
 export function InvoiceEditorPage() {
   const { id } = useParams<{ id: string }>()
