@@ -6,7 +6,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { FilterBar } from '@/components/ui/FilterBar'
-import { Select } from '@/components/ui/Select'
+import { FilterPills, type FilterPillOption } from '@/components/ui/FilterPills'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
@@ -21,6 +21,19 @@ const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   refused: { label: 'Refusé', state: 'overdue' },
   expired: { label: 'Expiré', state: 'neutral' },
 }
+
+// Deliberately distinct from InvoicesListPage's status set (draft/issued/paid/overdue/
+// cancelled) — quotes have their own lifecycle (draft/sent/accepted/refused/expired), never
+// invoice statuses, even though "accepted" and "paid" share the same green as a matter of
+// pure colour choice.
+const STATUS_FILTER_OPTIONS: FilterPillOption[] = [
+  { value: 'all', label: 'Tous', state: 'all' },
+  { value: 'draft', label: 'Brouillons', state: 'neutral' },
+  { value: 'sent', label: 'Envoyés', state: 'pending' },
+  { value: 'accepted', label: 'Acceptés', state: 'paid' },
+  { value: 'refused', label: 'Refusés', state: 'overdue' },
+  { value: 'expired', label: 'Expirés', state: 'neutral' },
+]
 
 interface QuotesListPageProps {
   clientId?: string
@@ -86,15 +99,8 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
     <>
       <FilterBar>
         <SearchInput placeholder="Rechercher un numéro…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-[180px]">
-          <option value="all">Tous</option>
-          <option value="draft">Brouillons</option>
-          <option value="sent">Envoyés</option>
-          <option value="accepted">Acceptés</option>
-          <option value="refused">Refusés</option>
-          <option value="expired">Expirés</option>
-        </Select>
       </FilterBar>
+      <FilterPills options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} aria-label="Filtrer les devis par statut" />
 
       <Card className="p-0">
         <DataTable

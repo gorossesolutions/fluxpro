@@ -6,7 +6,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { FilterBar } from '@/components/ui/FilterBar'
-import { Select } from '@/components/ui/Select'
+import { FilterPills, type FilterPillOption } from '@/components/ui/FilterPills'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
@@ -21,6 +21,15 @@ const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   overdue: { label: 'En retard', state: 'overdue' },
   cancelled: { label: 'Annulée', state: 'neutral' },
 }
+
+const STATUS_FILTER_OPTIONS: FilterPillOption[] = [
+  { value: 'all', label: 'Toutes', state: 'all' },
+  { value: 'draft', label: 'Brouillons', state: 'neutral' },
+  { value: 'issued', label: 'En attente', state: 'pending' },
+  { value: 'paid', label: 'Payées', state: 'paid' },
+  { value: 'overdue', label: 'En retard', state: 'overdue' },
+  { value: 'cancelled', label: 'Annulées', state: 'neutral' },
+]
 
 interface InvoicesListPageProps {
   clientId?: string
@@ -86,15 +95,8 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
     <>
       <FilterBar>
         <SearchInput placeholder="Rechercher un numéro…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-[180px]">
-          <option value="all">Toutes</option>
-          <option value="draft">Brouillons</option>
-          <option value="issued">En attente</option>
-          <option value="paid">Payées</option>
-          <option value="overdue">En retard</option>
-          <option value="cancelled">Annulées</option>
-        </Select>
       </FilterBar>
+      <FilterPills options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} aria-label="Filtrer les factures par statut" />
 
       <Card className="p-0">
         <DataTable

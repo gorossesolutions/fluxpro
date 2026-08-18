@@ -321,6 +321,15 @@ export function InvoiceEditorPage() {
                 setDueDate(addDays(issueDate, days))
               }}
             >
+              {/* A client's own "Conditions de paiement par défaut" (ClientForm) accepts any
+                  number and gets applied here as-is on client selection — if it isn't one of
+                  the presets below, it would otherwise silently vanish from this dropdown
+                  (no matching <option>) while the real value stayed applied underneath,
+                  invisibly, all the way to the printed PDF. Surfacing it as its own option
+                  makes an unexpected value impossible to miss instead of impossible to see. */}
+              {!PAYMENT_TERMS_PRESETS.some((p) => p.days === paymentTerms) && (
+                <option value={paymentTerms}>Personnalisé ({paymentTerms} jours)</option>
+              )}
               {PAYMENT_TERMS_PRESETS.map((p) => (
                 <option key={p.days} value={p.days}>
                   {p.label}
