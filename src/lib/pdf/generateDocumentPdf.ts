@@ -250,7 +250,13 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
     content.push({
       columns: [
         input.paymentTerms != null
-          ? { width: '*', stack: [{ text: 'Conditions de paiement', style: 'sectionLabel' }, { text: `${input.paymentTerms} jours`, style: 'partyDetail' }] }
+          ? {
+              width: '*',
+              stack: [
+                { text: 'Conditions de paiement', style: 'sectionLabel' },
+                { text: input.paymentTerms === 0 ? 'À réception' : `${input.paymentTerms} jours`, style: 'partyDetail' },
+              ],
+            }
           : { width: '*', text: '' },
         bankLines.length > 0
           ? { width: '*', stack: [{ text: 'Coordonnées bancaires', style: 'sectionLabel' }, ...bankLines.map((l) => ({ text: l, style: 'partyDetail' }))] }
