@@ -14,7 +14,9 @@ export type CreditNoteLine = Database['public']['Tables']['credit_note_lines']['
 
 export interface InvoiceListFilters {
   clientId?: string
-  status?: string
+  /** Empty/omitted = no status filter ("Toutes"); multiple values OR together (spec: pills
+   * are multi-select, e.g. "Payées" + "Brouillons" at once). */
+  statuses?: string[]
   search?: string
 }
 
@@ -24,7 +26,7 @@ export function useInvoices(filters: InvoiceListFilters = {}) {
     queryFn: async (): Promise<Invoice[]> => {
       let query = supabase.from('invoices').select('*')
       if (filters.clientId) query = query.eq('client_id', filters.clientId)
-      if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status as Invoice['status'])
+      if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Invoice['status'][])
       if (filters.search) {
         query = query.or(`number.ilike.%${filters.search}%`)
       }

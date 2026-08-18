@@ -20,25 +20,36 @@ const activeClasses: Record<SemanticState | 'all', string> = {
 
 interface FilterPillsProps {
   options: FilterPillOption[]
-  value: string
-  onChange: (value: string) => void
+  /** Selected status values. Empty = no filter ("Toutes"/"Tous" active). */
+  value: string[]
+  onChange: (value: string[]) => void
   'aria-label': string
 }
 
-/** Single-select status filter, styled as tags/pills rather than a dropdown — colour-matched
- * to the same SemanticState used by Badge in the table rows, so the active pill visually
- * previews the rows it filters to. */
+/** Multi-select status filter, styled as tags/pills rather than a dropdown — colour-matched
+ * to the same SemanticState used by Badge in the table rows, so each active pill visually
+ * previews the rows it filters to. Any combination of real statuses can be active together
+ * (e.g. "Payées" + "Brouillons"); the 'all' option is exclusive — picking it clears every
+ * other selection, and picking any real status un-picks 'all'. */
 export function FilterPills({ options, value, onChange, 'aria-label': ariaLabel }: FilterPillsProps) {
+  const handleClick = (opt: FilterPillOption) => {
+    if (opt.state === 'all') {
+      onChange([])
+      return
+    }
+    onChange(value.includes(opt.value) ? value.filter((v) => v !== opt.value) : [...value, opt.value])
+  }
+
   return (
     <div role="group" aria-label={ariaLabel} className="flex flex-wrap gap-2">
       {options.map((opt) => {
-        const active = value === opt.value
+        const active = opt.state === 'all' ? value.length === 0 : value.includes(opt.value)
         return (
           <button
             key={opt.value}
             type="button"
             aria-pressed={active}
-            onClick={() => onChange(opt.value)}
+            onClick={() => handleClick(opt)}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2',

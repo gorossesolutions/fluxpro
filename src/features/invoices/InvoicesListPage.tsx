@@ -39,9 +39,9 @@ interface InvoicesListPageProps {
 export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const [status, setStatus] = useState<string[]>([])
 
-  const { data: invoices = [], isLoading, error } = useInvoices({ clientId, search, status })
+  const { data: invoices = [], isLoading, error } = useInvoices({ clientId, search, statuses: status })
 
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(
     () => [

@@ -43,8 +43,8 @@ interface QuotesListPageProps {
 export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const { data: quotes = [], isLoading, error } = useQuotes({ clientId, search, status })
+  const [status, setStatus] = useState<string[]>([])
+  const { data: quotes = [], isLoading, error } = useQuotes({ clientId, search, statuses: status })
 
   const columns = useMemo<ColumnDef<Quote, unknown>[]>(
     () => [

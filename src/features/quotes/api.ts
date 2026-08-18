@@ -9,7 +9,9 @@ export type QuoteLine = Database['public']['Tables']['quote_lines']['Row']
 
 export interface QuoteListFilters {
   clientId?: string
-  status?: string
+  /** Empty/omitted = no status filter ("Tous"); multiple values OR together (spec: pills are
+   * multi-select, e.g. "Acceptés" + "Brouillons" at once). */
+  statuses?: string[]
   search?: string
 }
 
@@ -19,7 +21,7 @@ export function useQuotes(filters: QuoteListFilters = {}) {
     queryFn: async (): Promise<Quote[]> => {
       let query = supabase.from('quotes').select('*')
       if (filters.clientId) query = query.eq('client_id', filters.clientId)
-      if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status as Quote['status'])
+      if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Quote['status'][])
       if (filters.search) query = query.or(`number.ilike.%${filters.search}%`)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
