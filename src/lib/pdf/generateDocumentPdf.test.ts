@@ -30,9 +30,6 @@ const baseInput: DocumentPdfInput = {
   taxRate: 0,
   taxAmount: 0,
   total: 2000,
-  fxRateToMur: 52.5,
-  fxRateDate: '2026-08-01',
-  fxSource: 'manual',
   countryMention: 'Autoliquidation — TVA due par le preneur (Article 283-2 du CGI)',
   supplyTreatment: 'zero_rated_export',
   paymentTerms: 30,
@@ -64,12 +61,11 @@ describe('buildDocumentPdfDefinition', () => {
     expect(buffer.subarray(0, 5).toString('utf-8')).toBe('%PDF-')
   })
 
-  it('handles a minimal credit note with no bank account, FX, or mentions', () => {
+  it('handles a minimal credit note with no bank account or mentions', () => {
     const definition = buildDocumentPdfDefinition({
       ...baseInput,
       documentTypeLabel: 'AVOIR',
       currency: 'MUR',
-      fxRateToMur: null,
       bankAccount: null,
       countryMention: null,
       supplyTreatment: null,

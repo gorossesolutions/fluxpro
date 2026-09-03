@@ -83,9 +83,6 @@ export interface DocumentPdfInput {
   taxRate: number
   taxAmount: number
   total: number
-  fxRateToMur?: number | null
-  fxRateDate?: string | null
-  fxSource?: string | null
   countryMention?: string | null
   supplyTreatment?: 'domestic' | 'zero_rated_export' | null
   paymentTerms?: number | null
@@ -231,14 +228,6 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
     margin: [0, 0, 0, 16],
   })
 
-  if (input.currency !== 'MUR' && input.fxRateToMur) {
-    content.push({
-      text: `1 ${input.currency} = ${input.fxRateToMur} MUR au ${formatDate(input.fxRateDate ?? input.issueDate)} (taux figé à l'émission — source : ${input.fxSource ?? 'n/a'})`,
-      style: 'fxNote',
-      margin: [0, 0, 0, 12],
-    })
-  }
-
   if (input.supplyTreatment === 'zero_rated_export') {
     content.push({ text: 'Zero-rated supply', style: 'mention', margin: [0, 0, 0, 4] })
   }
@@ -289,7 +278,6 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
       totalsValue: { fontSize: 9 },
       totalsLabelBold: { fontSize: 11, bold: true },
       totalsValueBold: { fontSize: 11, bold: true },
-      fxNote: { fontSize: 8, color: '#364151', italics: true },
       mention: { fontSize: 9, bold: true },
       legalMentions: { fontSize: 7, color: '#64748b', margin: [0, 16, 0, 0] },
     },
