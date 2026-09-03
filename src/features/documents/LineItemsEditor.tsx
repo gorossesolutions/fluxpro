@@ -1,8 +1,15 @@
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
+
+// Kept well below what would make a single line item's PDF table row sprawl across pages —
+// the description prints as its own block under the title (generateDocumentPdf.ts), which
+// wraps and auto-grows the row safely, but an unbounded paste-in could still make one line
+// item absurdly tall. Enforced both in the textarea (maxLength) and shown as a live counter.
+export const LINE_DESCRIPTION_MAX_LENGTH = 500
 
 export interface EditableLine {
   title: string
@@ -63,11 +70,18 @@ export function LineItemsEditor({ lines, onChange, currency }: LineItemsEditorPr
                 value={line.title}
                 onChange={(e) => updateLine(index, { title: e.target.value })}
               />
-              <Input
-                placeholder="Description (optionnel)"
-                value={line.description}
-                onChange={(e) => updateLine(index, { description: e.target.value })}
-              />
+              <div>
+                <Textarea
+                  placeholder="Description (optionnel)"
+                  rows={2}
+                  maxLength={LINE_DESCRIPTION_MAX_LENGTH}
+                  value={line.description}
+                  onChange={(e) => updateLine(index, { description: e.target.value })}
+                />
+                <p className="mt-0.5 text-right text-xs text-slate/60">
+                  {line.description.length}/{LINE_DESCRIPTION_MAX_LENGTH}
+                </p>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label htmlFor={`line-quantity-${index}`} className="mb-1 block text-xs text-slate">Quantité</label>

@@ -118,8 +118,18 @@ function partyBlock(party: PdfParty): Content {
 export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDefinitions {
   const money = (amount: number) => formatMoney(toMinorUnits(amount.toFixed(2)), input.currency)
 
+  // Title and description render as their own stacked block, not one string glued together
+  // with a newline — keeps a long, wrapped, multi-line description visually distinct from the
+  // title (its own smaller/muted style) instead of blurring into it. Still lives entirely
+  // inside this one table cell, so pdfmake auto-grows the row to fit however many lines the
+  // description wraps to — never overlaps the Qté/P.U./Total cells beside it.
   const lineRow = (line: PdfLineItem): Content[] => [
-    { text: [line.title, line.description ? `\n${line.description}` : ''].join(''), style: 'tableCell' },
+    {
+      stack: [
+        { text: line.title, style: 'tableCell' },
+        ...(line.description ? [{ text: line.description, style: 'tableCellDescription' }] : []),
+      ],
+    },
     { text: String(line.quantity), style: 'tableCell', alignment: 'right' },
     { text: money(line.unitPrice), style: 'tableCell', alignment: 'right' },
     { text: money(line.lineTotal), style: 'tableCell', alignment: 'right' },
@@ -274,6 +284,7 @@ export function buildDocumentPdfDefinition(input: DocumentPdfInput): TDocumentDe
       partyDetail: { fontSize: 9, color: '#364151', margin: [0, 1, 0, 0] },
       tableHeader: { fontSize: 8, bold: true, color: '#364151' },
       tableCell: { fontSize: 9 },
+      tableCellDescription: { fontSize: 8, color: '#64748b', margin: [0, 2, 0, 0] },
       totalsLabel: { fontSize: 9, color: '#364151' },
       totalsValue: { fontSize: 9 },
       totalsLabelBold: { fontSize: 11, bold: true },
