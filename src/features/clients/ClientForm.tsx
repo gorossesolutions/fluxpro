@@ -193,7 +193,7 @@ export function ClientForm({ defaultValues, onSubmit, submitting, formId }: Clie
           </div>
           <div>
             <label htmlFor="default_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement (jours)</label>
-            <NumberInput id="default_payment_terms" {...register('default_payment_terms')} />
+            <NumberInput id="default_payment_terms" decimals={0} {...register('default_payment_terms')} />
           </div>
           <div>
             <label htmlFor="default_tax_rate" className="mb-1 block text-sm font-medium text-slate">Taux de taxe par défaut (%)</label>

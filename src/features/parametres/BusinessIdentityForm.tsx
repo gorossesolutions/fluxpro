@@ -152,7 +152,7 @@ export function BusinessIdentityForm({ defaultValues, onSubmit, formId }: Busine
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="bi_default_payment_terms" className="mb-1 block text-sm font-medium text-slate">Conditions de paiement par défaut (jours)</label>
-            <NumberInput id="bi_default_payment_terms" {...register('default_payment_terms')} />
+            <NumberInput id="bi_default_payment_terms" decimals={0} {...register('default_payment_terms')} />
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="bi_billing_details" className="mb-1 block text-sm font-medium text-slate">Détails de facturation</label>

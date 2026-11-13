@@ -5,7 +5,7 @@ import { addMoney, subMoney, mulMoney, toMinorUnits, fromMinorUnits, type MinorU
 import type { Database } from '@/types/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useBusinessIdentity, useSetVatRegistered } from '@/features/parametres/api'
-import { currentFiscalYearStart } from './calculations'
+import { currentFiscalYearStart, fiscalYearEndDate, groupExpensesByCategory, type ExpensesByCategoryResult } from './calculations'
 
 export type TaxBand = Database['public']['Tables']['tax_bands']['Row']
 export type TaxConfig = Database['public']['Tables']['tax_config']['Row']
@@ -85,7 +85,7 @@ export function useSaveTaxHistory() {
 }
 
 export { currentFiscalYearStart, computeProgressiveTax, computeFsc } from './calculations'
-export type { TaxBandResult, ProgressiveTaxResult } from './calculations'
+export type { TaxBandResult, ProgressiveTaxResult, ExpensesByCategoryResult, ExpenseCategoryTotal } from './calculations'
 
 /** Rolling 12-month invoiced turnover in MUR, for the VAT registration-threshold watch (spec
  * §3.2). Turnover is invoiced (accrual) revenue, not cash collected — matches how VAT
@@ -206,6 +206,53 @@ export function useNetIncomeEstimate(fiscalYearStart: string) {
 
       const net = subMoney(revenueMur, deductibleExpensesMur)
       return (net > 0 ? net : 0) as MinorUnits
+    },
+  })
+}
+
+/** Every expense occurrence of a fiscal year (1 July → 30 June), grouped by expense category,
+ * in MUR — the figures to copy into the expense lines of the annual tax return. Archived
+ * (soft-deleted) expenses are left out. Deductibility is the per-expense flag set on the
+ * Dépenses page; an accountant still decides what is actually allowable. */
+export function useExpensesByCategory(fiscalYearStart: string) {
+  return useQuery({
+    queryKey: ['expenses-by-category', fiscalYearStart],
+    queryFn: async (): Promise<ExpensesByCategoryResult> => {
+      const start = fiscalYearStart
+      const end = fiscalYearEndDate(fiscalYearStart)
+
+      const { data: occurrences, error: occError } = await supabase
+        .from('expense_occurrences')
+        .select('expense_id, amount_mur')
+        .gte('occurrence_date', start)
+        .lte('occurrence_date', end)
+      if (occError) throw occError
+
+      const expenseIds = [...new Set(occurrences.map((o) => o.expense_id))]
+      if (expenseIds.length === 0) return groupExpensesByCategory([], [], [])
+
+      const [expensesResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('id, category_id, is_deductible, amount, vat_amount')
+          .in('id', expenseIds)
+          .is('deleted_at', null),
+        supabase.from('expense_categories').select('id, label_fr, pcg_code'),
+      ])
+      if (expensesResult.error) throw expensesResult.error
+      if (categoriesResult.error) throw categoriesResult.error
+
+      return groupExpensesByCategory(
+        occurrences.map((o) => ({ expenseId: o.expense_id, amountMur: Number(o.amount_mur) })),
+        expensesResult.data.map((e) => ({
+          id: e.id,
+          categoryId: e.category_id,
+          isDeductible: e.is_deductible,
+          amount: Number(e.amount),
+          vatAmount: Number(e.vat_amount),
+        })),
+        categoriesResult.data.map((c) => ({ id: c.id, label: c.label_fr, pcgCode: c.pcg_code })),
+      )
     },
   })
 }

@@ -14,7 +14,16 @@ import { useToast } from '@/components/ui/Toast'
 import { ClientCombobox } from '@/features/clients/ClientCombobox'
 import { useClient, type Client } from '@/features/clients/api'
 import { useBankAccounts, resolveCountryDefaults, useCountryRules, resolveFxRate, resolveDefaultTaxRate } from '@/features/reference/api'
-import { LineItemsEditor, emptyLine, computeSubtotal, type EditableLine } from '@/features/documents/LineItemsEditor'
+import {
+  LineItemsEditor,
+  emptyLine,
+  computeSubtotal,
+  computeLineTotalMinor,
+  lineQuantity,
+  lineUnitPriceMinor,
+  type EditableLine,
+} from '@/features/documents/LineItemsEditor'
+import { parseDecimal } from '@/lib/decimalInput'
 import { useBusinessIdentity } from '@/features/parametres/api'
 import { addMoney, fromMinorUnits, mulMoney, toMinorUnits } from '@/lib/money'
 import { formatMoney } from '@/lib/format'
@@ -118,7 +127,7 @@ export function InvoiceEditorPage() {
 
   const subtotal = computeSubtotal(lines)
   const subtotalMinor = toMinorUnits(subtotal)
-  const taxAmountMinor = mulMoney(subtotalMinor, Number.parseFloat(taxRate || '0') / 100)
+  const taxAmountMinor = mulMoney(subtotalMinor, parseDecimal(taxRate) / 100)
   const totalMinor = addMoney(subtotalMinor, taxAmountMinor)
 
   const isLocked = existing?.locked ?? false
@@ -152,7 +161,7 @@ export function InvoiceEditorPage() {
       issue_date: issueDate,
       due_date: dueDate || null,
       currency,
-      tax_rate: Number.parseFloat(taxRate || '0'),
+      tax_rate: parseDecimal(taxRate),
       subtotal: Number(subtotal),
       tax_amount: Number(fromMinorUnits(taxAmountMinor)),
       total: Number(fromMinorUnits(totalMinor)),
@@ -165,9 +174,9 @@ export function InvoiceEditorPage() {
     lines: lines.map((l) => ({
       title: l.title,
       description: l.description || null,
-      quantity: Number.parseFloat(l.quantity || '0'),
-      unit_price: Number(l.unit_price || '0'),
-      line_total: Number(fromMinorUnits(mulMoney(toMinorUnits(l.unit_price || '0'), Number.parseFloat(l.quantity || '0')))),
+      quantity: lineQuantity(l),
+      unit_price: Number(fromMinorUnits(lineUnitPriceMinor(l))),
+      line_total: Number(fromMinorUnits(computeLineTotalMinor(l))),
     })),
   })
 

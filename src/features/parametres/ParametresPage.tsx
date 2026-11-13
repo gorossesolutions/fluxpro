@@ -374,6 +374,7 @@ function FxRateSection({ settings }: { settings: AppSettings }) {
             <label htmlFor={`fx_rate_${currency}`} className="mb-1 block text-sm font-medium text-slate">{FX_CURRENCY_LABELS[currency]}</label>
             <NumberInput
               id={`fx_rate_${currency}`}
+              decimals={6}
               value={rateInputs[currency]}
               onChange={(e) => setRateInputs((prev) => ({ ...prev, [currency]: e.target.value }))}
               onBlur={() => void handleRateBlur(currency)}
@@ -443,6 +444,7 @@ function ApplicationTab() {
             <label htmlFor="app_keepalive" className="mb-1 block text-sm font-medium text-slate">Intervalle anti-pause (jours)</label>
             <NumberInput
               id="app_keepalive"
+              decimals={0}
               value={String(settings.keepalive_interval_days)}
               onChange={(e) => {
                 const days = Number.parseInt(e.target.value, 10)

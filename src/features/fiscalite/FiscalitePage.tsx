@@ -12,6 +12,7 @@ import { formatMoney } from '@/lib/format'
 import { toMinorUnits, fromMinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useNumberGaps } from '@/features/invoices/api'
+import { ExpensesByCategoryCard } from './ExpensesByCategoryCard'
 import {
   useTaxBands,
   useTaxConfig,
@@ -239,6 +240,13 @@ export function FiscalitePage() {
           </div>
         )}
       </Card>
+
+      <ExpensesByCategoryCard
+        fiscalYearStart={fiscalYearStart}
+        fiscalYears={fiscalYears}
+        onFiscalYearChange={setFiscalYearStart}
+        fiscalYearLabel={fiscalYearLabel}
+      />
 
       <Card>
         <h2 className="mb-4 text-sm font-semibold text-slate">Estimations enregistrées</h2>

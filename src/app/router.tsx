@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { RequireAuth } from './RequireAuth'
 import { MorePage } from './MorePage'
+import { RouteError } from './RouteError'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ClientsListPage } from '@/features/clients/ClientsListPage'
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
         <AppLayout />
       </RequireAuth>
     ),
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'clients', element: <ClientsListPage /> },
@@ -43,6 +45,6 @@ export const router = createBrowserRouter([
       { path: 'fiscalite', element: <FiscalitePage /> },
       { path: 'parametres', element: <ParametresPage /> },
       { path: 'plus', element: <MorePage /> },
-    ],
+    ].map((route) => ({ ...route, errorElement: <RouteError /> })),
   },
 ])

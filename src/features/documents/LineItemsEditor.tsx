@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
-import { addMoney, mulMoney, toMinorUnits, fromMinorUnits } from '@/lib/money'
+import { addMoney, mulMoney, toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
+import { parseDecimal } from '@/lib/decimalInput'
 
 // Kept well below what would make a single line item's PDF table row sprawl across pages —
 // the description prints as its own block under the title (generateDocumentPdf.ts), which
@@ -28,14 +29,27 @@ export function emptyLine(): EditableLine {
   return { title: '', description: '', quantity: '', unit_price: '' }
 }
 
+/* Render-time math must never throw: a stray letter in a price field used to reach
+ * toMinorUnits() mid-render, throw, and take the whole invoice/quote editor down (losing
+ * everything typed). parseDecimal() is total — anything unparseable counts as 0 until fixed. */
+export function lineQuantity(line: EditableLine): number {
+  return parseDecimal(line.quantity)
+}
+
+export function lineUnitPriceMinor(line: EditableLine): MinorUnits {
+  return toMinorUnits(parseDecimal(line.unit_price))
+}
+
+export function computeLineTotalMinor(line: EditableLine): MinorUnits {
+  return mulMoney(lineUnitPriceMinor(line), lineQuantity(line))
+}
+
 export function computeLineTotal(line: EditableLine): string {
-  const qty = Number.parseFloat(line.quantity || '0')
-  const unitPrice = toMinorUnits(line.unit_price || '0')
-  return fromMinorUnits(mulMoney(unitPrice, qty))
+  return fromMinorUnits(computeLineTotalMinor(line))
 }
 
 export function computeSubtotal(lines: EditableLine[]): string {
-  return fromMinorUnits(lines.reduce((sum, line) => addMoney(sum, toMinorUnits(computeLineTotal(line))), toMinorUnits('0')))
+  return fromMinorUnits(lines.reduce((sum, line) => addMoney(sum, computeLineTotalMinor(line)), 0 as MinorUnits))
 }
 
 /** Repeatable line-item editor shared by invoices and quotes (spec §7, §8: "same engine").
