@@ -467,3 +467,34 @@ export function useCancelledInvoiceCount(clientId?: string) {
     },
   })
 }
+
+const STATUS_REFRESH_KEY = 'invoice-status-refresh'
+
+/**
+ * Flips the signed-in user's own `issued` invoices whose due date has passed to `overdue` (and
+ * back, if a due date was pushed out) — fn_refresh_my_invoice_statuses, 0022. Runs once per app
+ * session per calendar day from AppLayout, so the stored status (list filter "En retard",
+ * badges, client "encours" colour) matches the dashboard's date-based figure without relying on
+ * a scheduled job. Best-effort: a failure (e.g. migration not applied yet) is logged and ignored.
+ */
+export function useRefreshInvoiceStatuses() {
+  const queryClient = useQueryClient()
+  const today = new Date().toISOString().slice(0, 10)
+  return useQuery({
+    // Deliberately outside the 'invoices' key space, so invalidating invoices never re-runs it.
+    queryKey: [STATUS_REFRESH_KEY, today],
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc('fn_refresh_my_invoice_statuses')
+      if (error) {
+        console.warn('Invoice status refresh skipped:', error.message)
+        return 0
+      }
+      if (data > 0) {
+        void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== STATUS_REFRESH_KEY })
+      }
+      return data
+    },
+  })
+}

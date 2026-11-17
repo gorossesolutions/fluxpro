@@ -7,6 +7,7 @@ import { AmountsVisibilityToggle } from '@/components/ui/AmountsVisibilityToggle
 import { useAuth } from '@/features/auth/AuthContext'
 import { useAutoRefreshFxRates, useApplyTheme, useApplyDensity } from '@/features/parametres/api'
 import { useAutoVatRegistration } from '@/features/fiscalite/api'
+import { useRefreshInvoiceStatuses } from '@/features/invoices/api'
 
 /**
  * Four responsive nav treatments in one shell (spec §15.2):
@@ -18,6 +19,7 @@ export function AppLayout() {
   const primaryItems = NAV_ITEMS.filter((i) => i.primary)
   useAutoRefreshFxRates()
   useAutoVatRegistration()
+  useRefreshInvoiceStatuses()
   useApplyTheme()
   useApplyDensity()
 

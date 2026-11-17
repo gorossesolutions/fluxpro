@@ -547,6 +547,10 @@ export interface Database {
         Args: Record<string, never>
         Returns: number
       }
+      fn_refresh_my_invoice_statuses: {
+        Args: Record<string, never>
+        Returns: number
+      }
       fn_set_default_bank_account: {
         Args: { p_id: string }
         Returns: undefined
