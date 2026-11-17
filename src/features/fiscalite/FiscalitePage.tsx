@@ -9,7 +9,7 @@ import { DateDisplay } from '@/components/ui/DateDisplay'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { formatMoney } from '@/lib/format'
-import { toMinorUnits, fromMinorUnits } from '@/lib/money'
+import { toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useNumberGaps } from '@/features/invoices/api'
 import { ExpensesByCategoryCard } from './ExpensesByCategoryCard'
@@ -23,7 +23,14 @@ import {
   currentFiscalYearStart,
   computeProgressiveTax,
   computeFsc,
+  useMonthlyNetIncome,
 } from './api'
+import { computeCsgSchedule, type CsgMode } from './calculations'
+import { CsgCard } from './CsgCard'
+
+function previousFiscalYearStart(fiscalYearStart: string): string {
+  return `${Number(fiscalYearStart.slice(0, 4)) - 1}-07-01`
+}
 
 function fiscalYearLabel(fiscalYearStart: string): string {
   const startYear = Number(fiscalYearStart.slice(0, 4))
@@ -55,6 +62,20 @@ export function FiscalitePage() {
   )
   const fscAmount = useMemo(() => computeFsc(configForYear, chargeableIncome), [configForYear, chargeableIncome])
   const netTax = totalTax + fscAmount
+
+  // CSG: defaults to the MRA rule for an established business (1/12 of last year's net) when
+  // there is a previous year on record, otherwise each month's actual net.
+  const [csgModeChoice, setCsgModeChoice] = useState<CsgMode | null>(null)
+  const monthlyNet = useMonthlyNetIncome(fiscalYearStart)
+  const previousYearNet = useMonthlyNetIncome(previousFiscalYearStart(fiscalYearStart))
+  const csgMode: CsgMode = csgModeChoice ?? ((previousYearNet.data?.totalMinor ?? 0) > 0 ? 'previous_year' : 'actual')
+  const csgSchedule = useMemo(() => {
+    if (!monthlyNet.data || !previousYearNet.data) return null
+    const previousTotal = Math.max(0, previousYearNet.data.totalMinor) as MinorUnits
+    return computeCsgSchedule(fiscalYearStart, csgMode, monthlyNet.data.byMonth, previousTotal, new Date().toISOString().slice(0, 7))
+  }, [monthlyNet.data, previousYearNet.data, fiscalYearStart, csgMode])
+  const csgAmount = csgSchedule ? Number.parseFloat(fromMinorUnits(csgSchedule.totalMinor)) : 0
+  const netAfterTaxAndCsg = chargeableIncome - netTax - csgAmount
 
   const vatThreshold = configForYear?.vat_registration_threshold ?? 3_000_000
   const turnoverValue = turnoverMur ? Number.parseFloat(fromMinorUnits(turnoverMur)) : 0
@@ -224,6 +245,25 @@ export function FiscalitePage() {
                 <span className="font-medium text-ink">Total estimé</span>
                 <span className="tabular-nums text-base font-semibold text-ink">{formatMoney(toMinorUnits(netTax.toFixed(2)), 'MUR')}</span>
               </div>
+              {csgSchedule && (
+                <>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate">
+                      CSG de l'exercice{csgSchedule.monthsComputed < 12 ? ` (${csgSchedule.monthsComputed} mois écoulés)` : ''} — non
+                      déduite du revenu imposable
+                    </span>
+                    <span className="tabular-nums font-medium text-ink">{formatMoney(csgSchedule.totalMinor, 'MUR')}</span>
+                  </div>
+                  {chargeableIncome > 0 && (
+                    <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
+                      <span className="font-medium text-ink">Net après impôt et CSG</span>
+                      <span className="tabular-nums text-base font-semibold text-paid">
+                        {formatMoney(toMinorUnits(netAfterTaxAndCsg.toFixed(2)), 'MUR')}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {fscAmount > 0 && (
@@ -240,6 +280,17 @@ export function FiscalitePage() {
           </div>
         )}
       </Card>
+
+      <CsgCard
+        yearLabel={fiscalYearLabel(fiscalYearStart)}
+        previousYearLabel={fiscalYearLabel(previousFiscalYearStart(fiscalYearStart))}
+        mode={csgMode}
+        onModeChange={setCsgModeChoice}
+        schedule={csgSchedule}
+        previousYearNetMinor={previousYearNet.data?.totalMinor ?? null}
+        isLoading={monthlyNet.isLoading || previousYearNet.isLoading}
+        error={monthlyNet.error ?? previousYearNet.error}
+      />
 
       <ExpensesByCategoryCard
         fiscalYearStart={fiscalYearStart}

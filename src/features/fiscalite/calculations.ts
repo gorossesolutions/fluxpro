@@ -162,3 +162,86 @@ export function fiscalYearEndDate(fiscalYearStart: string): string {
   const startYear = Number(fiscalYearStart.slice(0, 4))
   return `${startYear + 1}-06-30`
 }
+
+// ---------------------------------------------------------------------------
+// CSG / social contribution for self-employed individuals
+// ---------------------------------------------------------------------------
+
+/** Self-employed CSG bands (MRA Starting Business Guide, Jan 2026 — Social Contribution and
+ * Social Benefits Act 2021), on the month's net income, in MUR:
+ *   ≤ 10,000          → flat Rs 150
+ *   10,000 – 50,000   → 1.5% of 90% of net income, minimum Rs 150
+ *   > 50,000          → 3% of 90% of net income
+ * Hardcoded on purpose (unlike tax_bands): it's a fixed statutory schedule unchanged since 2021;
+ * move it to a reference table if it ever starts changing yearly. A loss month counts as ≤ 10,000. */
+export const CSG_FLAT_AMOUNT_MUR = 150
+export const CSG_LOWER_THRESHOLD_MUR = 10_000
+export const CSG_UPPER_THRESHOLD_MUR = 50_000
+export const CSG_BASE_RATIO = 0.9
+export const CSG_LOWER_RATE = 0.015
+export const CSG_UPPER_RATE = 0.03
+
+export function computeSelfEmployedCsg(monthlyNetIncomeMinor: MinorUnits): MinorUnits {
+  const flat = toMinorUnits(CSG_FLAT_AMOUNT_MUR)
+  if (monthlyNetIncomeMinor <= toMinorUnits(CSG_LOWER_THRESHOLD_MUR)) return flat
+  const rate = monthlyNetIncomeMinor <= toMinorUnits(CSG_UPPER_THRESHOLD_MUR) ? CSG_LOWER_RATE : CSG_UPPER_RATE
+  const due = mulMoney(monthlyNetIncomeMinor, CSG_BASE_RATIO * rate)
+  return (due < flat ? flat : due) as MinorUnits
+}
+
+export type CsgMode = 'actual' | 'previous_year'
+
+export interface CsgMonth {
+  /** YYYY-MM */
+  month: string
+  /** Net income used as the CSG base for this month (null = month not reached yet, actual mode). */
+  baseMinor: MinorUnits | null
+  csgMinor: MinorUnits | null
+}
+
+export interface CsgSchedule {
+  months: CsgMonth[]
+  /** Sum of the months computed so far (actual mode) or of all 12 (previous-year mode). */
+  totalMinor: MinorUnits
+  /** How many months totalMinor covers (≤ 12 in actual mode, always 12 in previous-year mode). */
+  monthsComputed: number
+}
+
+/** The 12 months (YYYY-MM) of a 1 July fiscal year. */
+export function fiscalYearMonths(fiscalYearStart: string): string[] {
+  const startYear = Number(fiscalYearStart.slice(0, 4))
+  return Array.from({ length: 12 }, (_, i) => {
+    const monthIndex = 6 + i // July = 6
+    const year = startYear + Math.floor(monthIndex / 12)
+    return `${year}-${String((monthIndex % 12) + 1).padStart(2, '0')}`
+  })
+}
+
+/**
+ * - 'actual': each month's CSG on that month's own net income (what a newly registered
+ *   self-employed declares monthly). Months after `currentMonth` are left empty.
+ * - 'previous_year': every month's base is 1/12 of the preceding fiscal year's net income (the
+ *   option for someone in business for 12+ months, filed monthly or annually in advance).
+ */
+export function computeCsgSchedule(
+  fiscalYearStart: string,
+  mode: CsgMode,
+  monthlyNetMinor: Record<string, MinorUnits>,
+  previousYearNetMinor: MinorUnits,
+  currentMonth: string,
+): CsgSchedule {
+  let total = 0 as MinorUnits
+  let computed = 0
+  const previousYearMonthly = Math.round(previousYearNetMinor / 12) as MinorUnits
+
+  const months = fiscalYearMonths(fiscalYearStart).map((month): CsgMonth => {
+    if (mode === 'actual' && month > currentMonth) return { month, baseMinor: null, csgMinor: null }
+    const baseMinor = mode === 'actual' ? (monthlyNetMinor[month] ?? (0 as MinorUnits)) : previousYearMonthly
+    const csgMinor = computeSelfEmployedCsg(baseMinor)
+    total = addMoney(total, csgMinor)
+    computed++
+    return { month, baseMinor, csgMinor }
+  })
+
+  return { months, totalMinor: total, monthsComputed: computed }
+}

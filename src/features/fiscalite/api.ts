@@ -256,3 +256,64 @@ export function useExpensesByCategory(fiscalYearStart: string) {
     },
   })
 }
+
+export interface MonthlyNetIncome {
+  /** YYYY-MM → invoiced revenue minus deductible expenses for that month, MUR minor units. */
+  byMonth: Record<string, MinorUnits>
+  totalMinor: MinorUnits
+}
+
+/** Net income month by month over a fiscal year — same definition as useNetIncomeEstimate
+ * (issued, non-cancelled invoices at their frozen MUR rate, by issue date, minus occurrences of
+ * non-archived deductible expenses), but kept per month and allowed to go negative, because the
+ * self-employed CSG is assessed on each month's net income. */
+export function useMonthlyNetIncome(fiscalYearStart: string) {
+  return useQuery({
+    queryKey: ['monthly-net-income', fiscalYearStart],
+    queryFn: async (): Promise<MonthlyNetIncome> => {
+      const start = fiscalYearStart
+      const end = fiscalYearEndDate(fiscalYearStart)
+
+      const [invoicesResult, occurrencesResult] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('total, fx_rate_to_mur, issue_date')
+          .neq('status', 'draft')
+          .neq('status', 'cancelled')
+          .gte('issue_date', start)
+          .lte('issue_date', end),
+        supabase.from('expense_occurrences').select('amount_mur, expense_id, occurrence_date').gte('occurrence_date', start).lte('occurrence_date', end),
+      ])
+      if (invoicesResult.error) throw invoicesResult.error
+      if (occurrencesResult.error) throw occurrencesResult.error
+
+      const byMonth: Record<string, MinorUnits> = {}
+      const add = (month: string, amount: MinorUnits) => {
+        byMonth[month] = addMoney(byMonth[month] ?? (0 as MinorUnits), amount)
+      }
+
+      for (const inv of invoicesResult.data) {
+        add(inv.issue_date.slice(0, 7), mulMoney(toMinorUnits(String(inv.total)), inv.fx_rate_to_mur))
+      }
+
+      const expenseIds = [...new Set(occurrencesResult.data.map((o) => o.expense_id))]
+      if (expenseIds.length > 0) {
+        const { data: flags, error } = await supabase
+          .from('expenses')
+          .select('id, is_deductible')
+          .in('id', expenseIds)
+          .is('deleted_at', null)
+        if (error) throw error
+        const deductible = new Set(flags.filter((e) => e.is_deductible).map((e) => e.id))
+        for (const occ of occurrencesResult.data) {
+          if (deductible.has(occ.expense_id)) {
+            add(occ.occurrence_date.slice(0, 7), subMoney(0 as MinorUnits, toMinorUnits(String(occ.amount_mur))))
+          }
+        }
+      }
+
+      const totalMinor = Object.values(byMonth).reduce((acc, v) => addMoney(acc, v), 0 as MinorUnits)
+      return { byMonth, totalMinor }
+    },
+  })
+}
