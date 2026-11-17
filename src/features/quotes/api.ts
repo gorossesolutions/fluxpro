@@ -13,6 +13,9 @@ export interface QuoteListFilters {
    * multi-select, e.g. "Acceptés" + "Brouillons" at once). */
   statuses?: string[]
   search?: string
+  /** 'active' (default): everything except cancelled quotes, which live in their own view.
+   * 'cancelled': only cancelled quotes (statuses is ignored). */
+  view?: 'active' | 'cancelled'
 }
 
 export function useQuotes(filters: QuoteListFilters = {}) {
@@ -21,7 +24,9 @@ export function useQuotes(filters: QuoteListFilters = {}) {
     queryFn: async (): Promise<Quote[]> => {
       let query = supabase.from('quotes').select('*')
       if (filters.clientId) query = query.eq('client_id', filters.clientId)
-      if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Quote['status'][])
+      if (filters.view === 'cancelled') query = query.eq('status', 'cancelled')
+      else if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Quote['status'][])
+      else query = query.neq('status', 'cancelled')
       if (filters.search) query = query.or(`number.ilike.%${filters.search}%`)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
@@ -40,7 +45,12 @@ export function useQuoteAcceptanceRate(clientId: string | undefined) {
     queryKey: ['quotes', 'acceptance-rate', clientId],
     enabled: Boolean(clientId),
     queryFn: async (): Promise<number | null> => {
-      const { data, error } = await supabase.from('quotes').select('status').eq('client_id', clientId!).neq('status', 'draft')
+      // Cancelled quotes were withdrawn by us, not decided by the client — they don't count either.
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('status')
+        .eq('client_id', clientId!)
+        .not('status', 'in', '(draft,cancelled)')
       if (error) throw error
       if (data.length === 0) return null
       const accepted = data.filter((q) => q.status === 'accepted').length
@@ -238,6 +248,38 @@ export function useRefuseQuote() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.all })
+    },
+  })
+}
+
+/** Withdraws a sent/accepted/refused/expired quote: kept for the record (number not reused),
+ * moved to the "Annulés" view. Allowed on a locked quote — fn_guard_quote_immutability never
+ * freezes `status` (0021_quote_cancelled_status.sql). */
+export function useCancelQuote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<Quote> => {
+      const { data, error } = await supabase.from('quotes').update({ status: 'cancelled' }).eq('id', id).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes.detail(id) })
+    },
+  })
+}
+
+/** Number of cancelled quotes (optionally for one client) — shown on the "Annulés" tab. */
+export function useCancelledQuoteCount(clientId?: string) {
+  return useQuery({
+    queryKey: [...queryKeys.quotes.list({ clientId, view: 'cancelled' }), 'count'],
+    queryFn: async (): Promise<number> => {
+      let query = supabase.from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')
+      if (clientId) query = query.eq('client_id', clientId)
+      const { count, error } = await query
+      if (error) throw error
+      return count ?? 0
     },
   })
 }

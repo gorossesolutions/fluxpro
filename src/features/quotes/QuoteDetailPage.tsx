@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, ArrowRightCircle, Download, Pencil, Trash2, AlertTriangle, Ban } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, type SemanticState } from '@/components/ui/Badge'
@@ -25,6 +25,7 @@ import {
   useConvertQuoteToInvoice,
   useUpdateQuoteMutableFields,
   useDeleteQuote,
+  useCancelQuote,
 } from './api'
 import { QuoteEditorPage } from './QuoteEditorPage'
 
@@ -34,6 +35,7 @@ const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   accepted: { label: 'Accepté', state: 'paid' },
   refused: { label: 'Refusé', state: 'overdue' },
   expired: { label: 'Expiré', state: 'neutral' },
+  cancelled: { label: 'Annulé', state: 'neutral' },
 }
 
 export function QuoteDetailPage() {
@@ -54,6 +56,8 @@ export function QuoteDetailPage() {
   const [editValidUntil, setEditValidUntil] = useState('')
   const [editNotes, setEditNotes] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const cancelQuote = useCancelQuote()
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   if (isLoading) return <Skeleton className="h-96 w-full" />
 
@@ -71,6 +75,9 @@ export function QuoteDetailPage() {
 
   const statusInfo = STATUS_LABELS[quote.status] ?? STATUS_LABELS.draft!
   const totalMinor = toMinorUnits(String(quote.total))
+  const isCancelled = quote.status === 'cancelled'
+  // Once converted, the invoice is the live document — cancel that instead, not the quote.
+  const canCancel = !isCancelled && !quote.converted_invoice_id
 
   const handleOpenEdit = () => {
     setEditValidUntil(quote.valid_until ?? '')
@@ -211,10 +218,18 @@ export function QuoteDetailPage() {
               Voir la facture
             </Button>
           )}
-          <Button variant="secondary" onClick={handleOpenEdit}>
-            <Pencil className="h-4 w-4" />
-            Modifier
-          </Button>
+          {canCancel && (
+            <Button variant="secondary" onClick={() => setCancelOpen(true)}>
+              <Ban className="h-4 w-4" />
+              Annuler
+            </Button>
+          )}
+          {!isCancelled && (
+            <Button variant="secondary" onClick={handleOpenEdit}>
+              <Pencil className="h-4 w-4" />
+              Modifier
+            </Button>
+          )}
           <Button variant="secondary" onClick={handleDownloadPdf}>
             <Download className="h-4 w-4" />
             Télécharger PDF
@@ -225,6 +240,12 @@ export function QuoteDetailPage() {
           </Button>
         </div>
       </div>
+
+      {isCancelled && (
+        <p className="rounded-lg bg-canvas p-3 text-sm text-slate">
+          Ce devis est annulé : il reste consultable et téléchargeable, mais n'apparaît plus dans la liste principale (onglet « Annulés »).
+        </p>
+      )}
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-slate">Lignes de prestation</h2>
@@ -363,6 +384,23 @@ export function QuoteDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={async () => {
+          try {
+            await cancelQuote.mutateAsync(quote.id)
+            push('success', 'Devis annulé')
+          } catch (err) {
+            push('error', `Échec : ${getErrorMessage(err)}`)
+          }
+        }}
+        title="Annuler ce devis ?"
+        description="Le devis passera au statut « Annulé » et sera rangé dans l'onglet « Annulés ». Il reste consultable et son numéro n'est pas réutilisé. Pour l'effacer complètement, utilise plutôt « Supprimer »."
+        confirmLabel="Annuler le devis"
+        danger
+      />
 
       <ConfirmDialog
         open={deleteOpen}

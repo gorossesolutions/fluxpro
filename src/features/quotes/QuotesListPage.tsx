@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Plus, FileSignature } from 'lucide-react'
@@ -12,7 +12,9 @@ import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Card } from '@/components/ui/Card'
 import { toMinorUnits } from '@/lib/money'
-import { useQuotes, type Quote } from './api'
+import { Tabs } from '@/components/ui/Tabs'
+import { usePersistentFilters, splitList, joinList } from '@/lib/usePersistentFilters'
+import { useQuotes, useCancelledQuoteCount, type Quote } from './api'
 
 const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   draft: { label: 'Brouillon', state: 'neutral' },
@@ -20,10 +22,12 @@ const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   accepted: { label: 'Accepté', state: 'paid' },
   refused: { label: 'Refusé', state: 'overdue' },
   expired: { label: 'Expiré', state: 'neutral' },
+  cancelled: { label: 'Annulé', state: 'neutral' },
 }
 
 // Deliberately distinct from InvoicesListPage's status set (draft/issued/paid/overdue/
-// cancelled) — quotes have their own lifecycle (draft/sent/accepted/refused/expired), never
+// cancelled) — quotes have their own lifecycle (draft/sent/accepted/refused/expired, plus
+// cancelled which lives in its own "Annulés" tab rather than a pill), never
 // invoice statuses, even though "accepted" and "paid" share the same green as a matter of
 // pure colour choice.
 const STATUS_FILTER_OPTIONS: FilterPillOption[] = [
@@ -42,9 +46,17 @@ interface QuotesListPageProps {
 
 export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<string[]>([])
-  const { data: quotes = [], isLoading, error } = useQuotes({ clientId, search, statuses: status })
+  // Persisted (URL + localStorage) so filters survive opening a quote and coming back.
+  const [filters, setFilters] = usePersistentFilters(
+    clientId ? `fluxpro.filters.quotes.client.${clientId}` : 'fluxpro.filters.quotes',
+    { q: '', statut: '', vue: '' },
+    { syncUrl: !embedded },
+  )
+  const search = filters.q
+  const status = useMemo(() => splitList(filters.statut), [filters.statut])
+  const view: 'active' | 'cancelled' = filters.vue === 'annules' ? 'cancelled' : 'active'
+  const { data: quotes = [], isLoading, error } = useQuotes({ clientId, search, statuses: status, view })
+  const { data: cancelledCount = 0 } = useCancelledQuoteCount(clientId)
 
   const columns = useMemo<ColumnDef<Quote, unknown>[]>(
     () => [
@@ -97,10 +109,22 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
 
   const content = (
     <>
+      <Tabs
+        tabs={[
+          { id: 'active', label: 'Devis' },
+          { id: 'cancelled', label: 'Annulés', badge: cancelledCount },
+        ]}
+        activeId={view}
+        onChange={(id) => setFilters({ vue: id === 'cancelled' ? 'annules' : '' })}
+      />
       <FilterBar>
-        <SearchInput placeholder="Rechercher un numéro…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <SearchInput placeholder="Rechercher un numéro…" value={search} onChange={(e) => setFilters({ q: e.target.value })} className="max-w-sm" />
       </FilterBar>
-      <FilterPills options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} aria-label="Filtrer les devis par statut" />
+      {view === 'active' ? (
+        <FilterPills options={STATUS_FILTER_OPTIONS} value={status} onChange={(next) => setFilters({ statut: joinList(next) })} aria-label="Filtrer les devis par statut" />
+      ) : (
+        <p className="text-sm text-slate">Devis annulés : conservés pour l'historique, exclus de la liste principale et du taux d'acceptation.</p>
+      )}
 
       <Card className="p-0">
         <DataTable
@@ -108,9 +132,13 @@ export function QuotesListPage({ clientId, embedded }: QuotesListPageProps) {
           data={quotes}
           loading={isLoading}
           error={error}
-          emptyTitle="Aucun devis pour l'instant"
-          emptyDescription="Crée ton premier devis."
-          emptyAction={<Button onClick={() => navigate(clientId ? `/devis/nouveau?client=${clientId}` : '/devis/nouveau')}>Créer un devis</Button>}
+          emptyTitle={view === 'cancelled' ? 'Aucun devis annulé' : "Aucun devis pour l'instant"}
+          emptyDescription={view === 'cancelled' ? 'Les devis annulés apparaîtront ici.' : 'Crée ton premier devis.'}
+          emptyAction={
+            view === 'cancelled' ? undefined : (
+              <Button onClick={() => navigate(clientId ? `/devis/nouveau?client=${clientId}` : '/devis/nouveau')}>Créer un devis</Button>
+            )
+          }
           getRowRibbonClassName={(row) => `ribbon-${STATUS_LABELS[row.status]?.state ?? 'neutral'}`}
           renderMobileCard={(quote) => {
             const s = STATUS_LABELS[quote.status] ?? STATUS_LABELS.draft!
