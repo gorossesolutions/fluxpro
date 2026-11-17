@@ -2,7 +2,7 @@ import { Info } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { formatMoney } from '@/lib/format'
+import { useMoneyFormatter } from '@/lib/privacy'
 import { getErrorMessage } from '@/lib/errors'
 import type { MinorUnits } from '@/lib/money'
 import type { CsgMode, CsgSchedule } from './calculations'
@@ -18,7 +18,6 @@ interface CsgCardProps {
   error: unknown
 }
 
-const mur = (minor: MinorUnits) => formatMoney(minor, 'MUR')
 
 const monthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 const monthLabel = (yyyyMm: string) => monthFormatter.format(new Date(`${yyyyMm}-01T12:00:00`))
@@ -27,6 +26,8 @@ const monthLabel = (yyyyMm: string) => monthFormatter.format(new Date(`${yyyyMm}
  * computeSelfEmployedCsg). An estimate to prepare the CSG return — the MRA e-service remains the
  * place where the return is actually filed and paid. */
 export function CsgCard({ yearLabel, previousYearLabel, mode, onModeChange, schedule, previousYearNetMinor, isLoading, error }: CsgCardProps) {
+  const fmt = useMoneyFormatter()
+  const mur = (minor: MinorUnits) => fmt(minor, 'MUR')
   return (
     <Card>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

@@ -4,7 +4,7 @@ import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatMoney } from '@/lib/format'
+import { useMoneyFormatter } from '@/lib/privacy'
 import { fromMinorUnits, type MinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useExpensesByCategory, type ExpensesByCategoryResult } from './api'
@@ -16,7 +16,6 @@ interface ExpensesByCategoryCardProps {
   fiscalYearLabel: (fiscalYearStart: string) => string
 }
 
-const mur = (minor: MinorUnits) => formatMoney(minor, 'MUR')
 
 /** "12345.60" → "12345,60" so a French Excel reads it as a number, not text. */
 const csvAmount = (minor: MinorUnits) => fromMinorUnits(minor).replace('.', ',')
@@ -46,6 +45,8 @@ function downloadCsv(result: ExpensesByCategoryResult, yearLabel: string) {
 /** Fiscal-year expenses grouped by category, laid out to be copied line by line into the
  * expense section of the annual tax return. */
 export function ExpensesByCategoryCard({ fiscalYearStart, fiscalYears, onFiscalYearChange, fiscalYearLabel }: ExpensesByCategoryCardProps) {
+  const fmt = useMoneyFormatter()
+  const mur = (minor: MinorUnits) => fmt(minor, 'MUR')
   const { data, isLoading, error } = useExpensesByCategory(fiscalYearStart)
   const yearLabel = fiscalYearLabel(fiscalYearStart)
   const years = fiscalYears.includes(fiscalYearStart) ? fiscalYears : [fiscalYearStart, ...fiscalYears]

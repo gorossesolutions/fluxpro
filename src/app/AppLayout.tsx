@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Menu, MoreHorizontal, LogOut } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { NAV_ITEMS } from './nav'
+import { AmountsVisibilityToggle } from '@/components/ui/AmountsVisibilityToggle'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useAutoRefreshFxRates, useApplyTheme, useApplyDensity } from '@/features/parametres/api'
 import { useAutoVatRegistration } from '@/features/fiscalite/api'
@@ -60,7 +61,8 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-white/10 p-2">
+        <div className="space-y-1 border-t border-white/10 p-2">
+          <AmountsVisibilityToggle variant="sidebar" labelClassName={cn(!railOpen && 'sm:hidden', 'lg:inline')} />
           <button
             onClick={() => void signOut()}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white"
@@ -95,6 +97,7 @@ export function AppLayout() {
             {item.label.split(' ')[0]}
           </NavLink>
         ))}
+        <AmountsVisibilityToggle variant="tab" />
         <NavLink
           to="/plus"
           className={({ isActive }) =>

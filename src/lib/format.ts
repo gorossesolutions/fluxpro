@@ -38,3 +38,12 @@ export function formatDate(date: string | Date): string {
 export function formatPercent(rate: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 2 }).format(rate)
 }
+
+/** Fixed-length placeholder for a hidden amount: same currency placement as formatMoney, but the
+ * same number of dots whatever the value, so the mask never leaks the order of magnitude. */
+export const MASKED_DIGITS = '••••••'
+
+export function formatMoneyMasked(currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? currency
+  return currency === 'MUR' ? `${symbol} ${MASKED_DIGITS}` : `${MASKED_DIGITS} ${symbol}`
+}

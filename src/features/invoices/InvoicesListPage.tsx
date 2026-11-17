@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Plus, FileText } from 'lucide-react'
@@ -12,7 +12,9 @@ import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { Card } from '@/components/ui/Card'
 import { toMinorUnits } from '@/lib/money'
-import { useInvoices, type Invoice } from './api'
+import { Tabs } from '@/components/ui/Tabs'
+import { usePersistentFilters, splitList, joinList } from '@/lib/usePersistentFilters'
+import { useInvoices, useCancelledInvoiceCount, type Invoice } from './api'
 
 const STATUS_LABELS: Record<string, { label: string; state: SemanticState }> = {
   draft: { label: 'Brouillon', state: 'neutral' },
@@ -28,8 +30,11 @@ const STATUS_FILTER_OPTIONS: FilterPillOption[] = [
   { value: 'issued', label: 'En attente', state: 'pending' },
   { value: 'paid', label: 'Payées', state: 'paid' },
   { value: 'overdue', label: 'En retard', state: 'overdue' },
-  { value: 'cancelled', label: 'Annulées', state: 'neutral' },
+  // No "Annulées" pill: cancelled invoices are kept out of the working list entirely and live
+  // in their own "Annulées" tab below, so they never mix with invoices that still need action.
 ]
+
+type InvoiceView = 'active' | 'cancelled'
 
 interface InvoicesListPageProps {
   clientId?: string
@@ -38,10 +43,18 @@ interface InvoicesListPageProps {
 
 export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<string[]>([])
+  // Persisted (URL + localStorage) so filters survive opening an invoice and coming back.
+  const [filters, setFilters] = usePersistentFilters(
+    clientId ? `fluxpro.filters.invoices.client.${clientId}` : 'fluxpro.filters.invoices',
+    { q: '', statut: '', vue: '' },
+    { syncUrl: !embedded },
+  )
+  const search = filters.q
+  const status = useMemo(() => splitList(filters.statut), [filters.statut])
+  const view: InvoiceView = filters.vue === 'annulees' ? 'cancelled' : 'active'
 
-  const { data: invoices = [], isLoading, error } = useInvoices({ clientId, search, statuses: status })
+  const { data: invoices = [], isLoading, error } = useInvoices({ clientId, search, statuses: status, view })
+  const { data: cancelledCount = 0 } = useCancelledInvoiceCount(clientId)
 
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(
     () => [
@@ -93,10 +106,34 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
 
   const content = (
     <>
+      <Tabs
+        tabs={[
+          { id: 'active', label: 'Factures' },
+          { id: 'cancelled', label: 'Annulées', badge: cancelledCount },
+        ]}
+        activeId={view}
+        onChange={(id) => setFilters({ vue: id === 'cancelled' ? 'annulees' : '' })}
+      />
       <FilterBar>
-        <SearchInput placeholder="Rechercher un numéro…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <SearchInput
+          placeholder="Rechercher un numéro…"
+          value={search}
+          onChange={(e) => setFilters({ q: e.target.value })}
+          className="max-w-sm"
+        />
       </FilterBar>
-      <FilterPills options={STATUS_FILTER_OPTIONS} value={status} onChange={setStatus} aria-label="Filtrer les factures par statut" />
+      {view === 'active' ? (
+        <FilterPills
+          options={STATUS_FILTER_OPTIONS}
+          value={status}
+          onChange={(next) => setFilters({ statut: joinList(next) })}
+          aria-label="Filtrer les factures par statut"
+        />
+      ) : (
+        <p className="text-sm text-slate">
+          Factures annulées : conservées pour la traçabilité (numérotation continue), exclues des totaux et des relances.
+        </p>
+      )}
 
       <Card className="p-0">
         <DataTable
@@ -104,9 +141,13 @@ export function InvoicesListPage({ clientId, embedded }: InvoicesListPageProps) 
           data={invoices}
           loading={isLoading}
           error={error}
-          emptyTitle="Aucune facture pour l'instant"
-          emptyDescription="Crée ta première facture."
-          emptyAction={<Button onClick={() => navigate(clientId ? `/factures/nouvelle?client=${clientId}` : '/factures/nouvelle')}>Créer une facture</Button>}
+          emptyTitle={view === 'cancelled' ? 'Aucune facture annulée' : 'Aucune facture pour l\'instant'}
+          emptyDescription={view === 'cancelled' ? 'Les factures annulées apparaîtront ici.' : 'Crée ta première facture.'}
+          emptyAction={
+            view === 'cancelled' ? undefined : (
+              <Button onClick={() => navigate(clientId ? `/factures/nouvelle?client=${clientId}` : '/factures/nouvelle')}>Créer une facture</Button>
+            )
+          }
           getRowRibbonClassName={(row) => `ribbon-${STATUS_LABELS[row.status]?.state ?? 'neutral'}`}
           renderMobileCard={(invoice) => {
             const s = STATUS_LABELS[invoice.status] ?? STATUS_LABELS.draft!

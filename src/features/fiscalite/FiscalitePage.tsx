@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { DateDisplay } from '@/components/ui/DateDisplay'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
-import { formatMoney } from '@/lib/format'
+import { useMoneyFormatter } from '@/lib/privacy'
 import { toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useNumberGaps } from '@/features/invoices/api'
@@ -38,6 +38,7 @@ function fiscalYearLabel(fiscalYearStart: string): string {
 }
 
 export function FiscalitePage() {
+  const fmt = useMoneyFormatter()
   const { push } = useToast()
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [fiscalYearStart, setFiscalYearStart] = useState(currentFiscalYearStart())
@@ -147,7 +148,7 @@ export function FiscalitePage() {
             </div>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span className="text-ink">
-                {formatMoney(toMinorUnits(turnoverValue.toFixed(2)), 'MUR')} / {formatMoney(toMinorUnits(String(vatThreshold)), 'MUR')}
+                {fmt(toMinorUnits(turnoverValue.toFixed(2)), 'MUR')} / {fmt(toMinorUnits(String(vatThreshold)), 'MUR')}
               </span>
               <span className="text-slate">{Math.round(turnoverRatio * 100)}%</span>
             </div>
@@ -194,7 +195,7 @@ export function FiscalitePage() {
                   {estimating
                     ? 'Calcul de l\'estimation…'
                     : netIncomeEstimateMur != null
-                      ? `Pré-remplir avec une estimation (${formatMoney(netIncomeEstimateMur, 'MUR')}) — revenu facturé moins dépenses déductibles sur l'exercice, à vérifier`
+                      ? `Pré-remplir avec une estimation (${fmt(netIncomeEstimateMur, 'MUR')}) — revenu facturé moins dépenses déductibles sur l'exercice, à vérifier`
                       : 'Estimation indisponible'}
                 </button>
               </div>
@@ -219,10 +220,10 @@ export function FiscalitePage() {
                       </td>
                       <td className="px-3 py-2 text-right text-ink">{b.ratePct}%</td>
                       <td className="px-3 py-2 text-right">
-                        <span className="tabular-nums">{formatMoney(toMinorUnits(b.taxableInBand.toFixed(2)), 'MUR')}</span>
+                        <span className="tabular-nums">{fmt(toMinorUnits(b.taxableInBand.toFixed(2)), 'MUR')}</span>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <span className="tabular-nums">{formatMoney(toMinorUnits(b.taxForBand.toFixed(2)), 'MUR')}</span>
+                        <span className="tabular-nums">{fmt(toMinorUnits(b.taxForBand.toFixed(2)), 'MUR')}</span>
                       </td>
                     </tr>
                   ))}
@@ -233,17 +234,17 @@ export function FiscalitePage() {
             <div className="flex flex-col gap-1 rounded-lg bg-canvas p-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-slate">Impôt progressif</span>
-                <span className="tabular-nums font-medium text-ink">{formatMoney(toMinorUnits(totalTax.toFixed(2)), 'MUR')}</span>
+                <span className="tabular-nums font-medium text-ink">{fmt(toMinorUnits(totalTax.toFixed(2)), 'MUR')}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate">
                   Fair Share Contribution {configForYear?.fsc_active ? `(15% au-delà de MUR ${new Intl.NumberFormat('fr-FR').format(configForYear.fsc_threshold)})` : '(inactive)'}
                 </span>
-                <span className="tabular-nums font-medium text-ink">{formatMoney(toMinorUnits(fscAmount.toFixed(2)), 'MUR')}</span>
+                <span className="tabular-nums font-medium text-ink">{fmt(toMinorUnits(fscAmount.toFixed(2)), 'MUR')}</span>
               </div>
               <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
                 <span className="font-medium text-ink">Total estimé</span>
-                <span className="tabular-nums text-base font-semibold text-ink">{formatMoney(toMinorUnits(netTax.toFixed(2)), 'MUR')}</span>
+                <span className="tabular-nums text-base font-semibold text-ink">{fmt(toMinorUnits(netTax.toFixed(2)), 'MUR')}</span>
               </div>
               {csgSchedule && (
                 <>
@@ -252,13 +253,13 @@ export function FiscalitePage() {
                       CSG de l'exercice{csgSchedule.monthsComputed < 12 ? ` (${csgSchedule.monthsComputed} mois écoulés)` : ''} — non
                       déduite du revenu imposable
                     </span>
-                    <span className="tabular-nums font-medium text-ink">{formatMoney(csgSchedule.totalMinor, 'MUR')}</span>
+                    <span className="tabular-nums font-medium text-ink">{fmt(csgSchedule.totalMinor, 'MUR')}</span>
                   </div>
                   {chargeableIncome > 0 && (
                     <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
                       <span className="font-medium text-ink">Net après impôt et CSG</span>
                       <span className="tabular-nums text-base font-semibold text-paid">
-                        {formatMoney(toMinorUnits(netAfterTaxAndCsg.toFixed(2)), 'MUR')}
+                        {fmt(toMinorUnits(netAfterTaxAndCsg.toFixed(2)), 'MUR')}
                       </span>
                     </div>
                   )}
@@ -316,10 +317,10 @@ export function FiscalitePage() {
                 <div>
                   <p className="font-medium text-ink">{fiscalYearLabel(h.fiscal_year_start)}</p>
                   <p className="text-xs text-slate">
-                    Revenu imposable : {h.chargeable_income != null ? formatMoney(toMinorUnits(h.chargeable_income.toFixed(2)), 'MUR') : '—'}
+                    Revenu imposable : {h.chargeable_income != null ? fmt(toMinorUnits(h.chargeable_income.toFixed(2)), 'MUR') : '—'}
                     {' · '}Total :{' '}
                     {h.tax_amount != null && h.fsc_amount != null
-                      ? formatMoney(toMinorUnits((h.tax_amount + h.fsc_amount).toFixed(2)), 'MUR')
+                      ? fmt(toMinorUnits((h.tax_amount + h.fsc_amount).toFixed(2)), 'MUR')
                       : '—'}
                     {' · '}
                     <DateDisplay date={h.computed_at} />

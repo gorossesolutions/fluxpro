@@ -17,8 +17,10 @@ import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
 import { useClients, useArchiveClient, useUnarchiveClient, type ClientWithFinancials } from './api'
 import { ClientFormSheet } from './ClientFormSheet'
+import { useMoneyFormatter } from '@/lib/privacy'
 
 export function ClientsListPage() {
+  const fmt = useMoneyFormatter()
   const navigate = useNavigate()
   const { push } = useToast()
   const [search, setSearch] = useState('')
@@ -69,7 +71,7 @@ export function ClientsListPage() {
           const overdue = row.original.financials?.has_overdue
           if (encours === 0) return <span className="text-slate/60">—</span>
           return (
-            <Badge state={overdue ? 'overdue' : 'pending'} label={`${new Intl.NumberFormat('fr-FR').format(encours)} Rs`} />
+            <Badge state={overdue ? 'overdue' : 'pending'} label={fmt(toMinorUnits(String(encours)), 'MUR')} />
           )
         },
       },
@@ -136,7 +138,7 @@ export function ClientsListPage() {
         ),
       },
     ],
-    [navigate, unarchiveClient],
+    [navigate, unarchiveClient, fmt],
   )
 
   return (

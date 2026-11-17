@@ -7,7 +7,8 @@ import { GroupedBarChart } from '@/components/ui/GroupedBarChart'
 import { MagnitudeBarList } from '@/components/ui/MagnitudeBarList'
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay'
 import { DateDisplay } from '@/components/ui/DateDisplay'
-import { formatMoney } from '@/lib/format'
+import { useAmountsVisible, useMoneyFormatter } from '@/lib/privacy'
+import { MASKED_DIGITS } from '@/lib/format'
 import { toMinorUnits, fromMinorUnits, type MinorUnits } from '@/lib/money'
 import { getErrorMessage } from '@/lib/errors'
 import { useDashboardSummary, type AgedBucket } from './api'
@@ -32,6 +33,8 @@ function compactMur(minor: number): string {
 }
 
 export function DashboardPage() {
+  const fmt = useMoneyFormatter()
+  const amountsVisible = useAmountsVisible()
   const { data, isLoading, error } = useDashboardSummary()
 
   if (isLoading) {
@@ -66,16 +69,16 @@ export function DashboardPage() {
 
       <Card className="border-blue/30 bg-blue-pale">
         <p className="text-sm font-medium text-blue">CA total</p>
-        <p className="tabular-nums mt-1 text-3xl font-bold text-ink">{formatMoney(kpis.totalCaMur, 'MUR')}</p>
+        <p className="tabular-nums mt-1 text-3xl font-bold text-ink">{fmt(kpis.totalCaMur, 'MUR')}</p>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="CA encaissé ce mois" value={formatMoney(kpis.collectedThisMonthMur, 'MUR')} state="paid" />
-        <KpiCard label="En attente" value={formatMoney(kpis.pendingMur, 'MUR')} state="pending" />
-        <KpiCard label="En retard" value={formatMoney(kpis.overdueMur, 'MUR')} state="overdue" />
+        <KpiCard label="CA encaissé ce mois" value={fmt(kpis.collectedThisMonthMur, 'MUR')} state="paid" />
+        <KpiCard label="En attente" value={fmt(kpis.pendingMur, 'MUR')} state="pending" />
+        <KpiCard label="En retard" value={fmt(kpis.overdueMur, 'MUR')} state="overdue" />
         <KpiCard
           label="Résultat net ce mois"
-          value={formatMoney(kpis.netThisMonthMur, 'MUR')}
+          value={fmt(kpis.netThisMonthMur, 'MUR')}
           state={kpis.netThisMonthMur >= 0 ? 'paid' : 'overdue'}
         />
       </div>
@@ -113,7 +116,7 @@ export function DashboardPage() {
                   { label: 'Encaissé', color: 'var(--color-chart-1)', values: monthly.map((m) => Number(fromMinorUnits(m.collectedMur))) },
                   { label: 'Dépenses', color: 'var(--color-chart-2)', values: monthly.map((m) => Number(fromMinorUnits(m.expensesMur))) },
                 ]}
-                formatValue={(v) => compactMur(toMinorUnits(v.toFixed(2)))}
+                formatValue={(v) => (amountsVisible ? compactMur(toMinorUnits(v.toFixed(2))) : MASKED_DIGITS)}
               />
             </div>
           </Card>
@@ -130,7 +133,7 @@ export function DashboardPage() {
                     value: Number(fromMinorUnits(b.amountMur)),
                     color: `color-mix(in oklab, var(--color-overdue) ${AGED_BUCKET_OPACITY[b.bucket] * 100}%, transparent)`,
                   }))}
-                  formatValue={(v) => formatMoney(toMinorUnits(v.toFixed(2)), 'MUR')}
+                  formatValue={(v) => fmt(toMinorUnits(v.toFixed(2)), 'MUR')}
                 />
               )}
             </Card>
@@ -142,7 +145,7 @@ export function DashboardPage() {
               ) : (
                 <MagnitudeBarList
                   items={expenseByCategory.slice(0, 7).map((c) => ({ label: c.label, value: Number(fromMinorUnits(c.amountMur)) }))}
-                  formatValue={(v) => formatMoney(toMinorUnits(v.toFixed(2)), 'MUR')}
+                  formatValue={(v) => fmt(toMinorUnits(v.toFixed(2)), 'MUR')}
                 />
               )}
             </Card>

@@ -14,7 +14,8 @@ import { DateDisplay } from '@/components/ui/DateDisplay'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { toMinorUnits } from '@/lib/money'
-import { formatMoney, formatPercent } from '@/lib/format'
+import { formatPercent } from '@/lib/format'
+import { useMoneyFormatter } from '@/lib/privacy'
 import { getErrorMessage } from '@/lib/errors'
 import { useClient, useUpdateClient, useArchiveClient, useUnarchiveClient } from './api'
 import { ClientFormSheet } from './ClientFormSheet'
@@ -100,6 +101,7 @@ function ClientDocumentsTab({ clientId }: { clientId: string }) {
 }
 
 export function ClientDetailPage() {
+  const fmt = useMoneyFormatter()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { push } = useToast()
@@ -190,10 +192,10 @@ export function ClientDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="CA total" value={formatMoney(toMinorUnits(String(financials?.ca_total_mur ?? 0)), 'MUR')} state="paid" />
+        <KpiCard label="CA total" value={fmt(toMinorUnits(String(financials?.ca_total_mur ?? 0)), 'MUR')} state="paid" />
         <KpiCard
           label="Encours"
-          value={formatMoney(toMinorUnits(String(financials?.encours_mur ?? 0)), 'MUR')}
+          value={fmt(toMinorUnits(String(financials?.encours_mur ?? 0)), 'MUR')}
           state={financials?.has_overdue ? 'overdue' : 'pending'}
         />
         <KpiCard

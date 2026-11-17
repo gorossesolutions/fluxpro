@@ -18,6 +18,9 @@ export interface InvoiceListFilters {
    * are multi-select, e.g. "Payées" + "Brouillons" at once). */
   statuses?: string[]
   search?: string
+  /** 'active' (default): everything except cancelled invoices, which live in their own view.
+   * 'cancelled': only cancelled invoices (statuses is ignored). */
+  view?: 'active' | 'cancelled'
 }
 
 export function useInvoices(filters: InvoiceListFilters = {}) {
@@ -26,7 +29,9 @@ export function useInvoices(filters: InvoiceListFilters = {}) {
     queryFn: async (): Promise<Invoice[]> => {
       let query = supabase.from('invoices').select('*')
       if (filters.clientId) query = query.eq('client_id', filters.clientId)
-      if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Invoice['status'][])
+      if (filters.view === 'cancelled') query = query.eq('status', 'cancelled')
+      else if (filters.statuses && filters.statuses.length > 0) query = query.in('status', filters.statuses as Invoice['status'][])
+      else query = query.neq('status', 'cancelled')
       if (filters.search) {
         query = query.or(`number.ilike.%${filters.search}%`)
       }
@@ -445,6 +450,20 @@ export function useNumberGaps() {
       const { data, error } = await supabase.from('v_number_gaps').select('*')
       if (error) throw error
       return data
+    },
+  })
+}
+
+/** Number of cancelled invoices (optionally for one client) — shown on the "Annulées" tab. */
+export function useCancelledInvoiceCount(clientId?: string) {
+  return useQuery({
+    queryKey: [...queryKeys.invoices.list({ clientId, view: 'cancelled' }), 'count'],
+    queryFn: async (): Promise<number> => {
+      let query = supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')
+      if (clientId) query = query.eq('client_id', clientId)
+      const { count, error } = await query
+      if (error) throw error
+      return count ?? 0
     },
   })
 }
