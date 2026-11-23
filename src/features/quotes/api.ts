@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Database } from '@/types/supabase'
+import { isMissingRpc } from '@/lib/errors'
 import type { DraftLineInput } from '@/features/invoices/api'
 
 export type Quote = Database['public']['Tables']['quotes']['Row']
@@ -151,6 +152,12 @@ export function useIssueQuote() {
   return useMutation({
     mutationFn: async ({ id }: IssueQuoteInput): Promise<Quote> => {
       const year = new Date().getFullYear()
+      // Number + status in one transaction (fn_issue_quote, 0024).
+      const { data: issued, error: issueError } = await supabase.rpc('fn_issue_quote', { p_quote_id: id, p_year: year })
+      if (!issueError) return issued
+      if (!isMissingRpc(issueError)) throw issueError
+
+      // Legacy two-step path, only until migration 0024 is applied.
       const { data: number, error: numberError } = await supabase.rpc('fn_allocate_document_number', {
         p_prefix: 'DEV',
         p_year: year,

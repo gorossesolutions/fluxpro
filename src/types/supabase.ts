@@ -539,6 +539,29 @@ export interface Database {
         Args: { p_prefix: DocumentNumberPrefix; p_year: number }
         Returns: string
       }
+      fn_issue_invoice: {
+        Args: { p_invoice_id: string; p_year: number; p_fx_rate_to_mur: number; p_fx_rate_date: string; p_fx_source: string }
+        Returns: Database['public']['Tables']['invoices']['Row']
+      }
+      fn_issue_quote: {
+        Args: { p_quote_id: string; p_year: number }
+        Returns: Database['public']['Tables']['quotes']['Row']
+      }
+      fn_create_credit_note: {
+        Args: {
+          p_parent_invoice_id: string
+          p_year: number
+          p_reason: string
+          p_currency: string
+          p_fx_rate_to_mur: number
+          p_subtotal: number
+          p_tax_rate: number
+          p_tax_amount: number
+          p_total: number
+          p_lines: { title: string; description: string | null; quantity: number; unit_price: number; line_total: number }[]
+        }
+        Returns: Database['public']['Tables']['credit_notes']['Row']
+      }
       fn_merge_clients: {
         Args: { p_keep_id: string; p_merge_id: string }
         Returns: undefined

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Database } from '@/types/supabase'
+import { isMissingRpc } from '@/lib/errors'
 
 export type Invoice = Database['public']['Tables']['invoices']['Row']
 export type InvoiceInsert = Database['public']['Tables']['invoices']['Insert']
@@ -231,15 +232,24 @@ export interface IssueInvoiceInput {
 }
 
 /** Issuance (spec §3.5, §7): allocates the number at this moment (never at draft creation),
- * freezes the FX rate, then locks the row. The number-allocation RPC and this update are two
- * separate calls — if the update fails after allocation, that number is burned and will show
- * up in the gap-check view (v_number_gaps), which exists precisely to surface that case rather
- * than pretend perfect atomicity across a REST round-trip. */
+ * freezes the FX rate, then locks the row — all in one transaction (fn_issue_invoice,
+ * 0024_atomic_document_issuance.sql), so a failure can no longer burn a number. */
 export function useIssueInvoice() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, fxRateToMur, fxRateDate, fxSource }: IssueInvoiceInput): Promise<Invoice> => {
       const year = new Date().getFullYear()
+      const { data: issued, error: issueError } = await supabase.rpc('fn_issue_invoice', {
+        p_invoice_id: id,
+        p_year: year,
+        p_fx_rate_to_mur: fxRateToMur,
+        p_fx_rate_date: fxRateDate,
+        p_fx_source: fxSource,
+      })
+      if (!issueError) return issued
+      if (!isMissingRpc(issueError)) throw issueError
+
+      // Legacy two-step path, only until migration 0024 is applied.
       const { data: number, error: numberError } = await supabase.rpc('fn_allocate_document_number', {
         p_prefix: 'FAC',
         p_year: year,
@@ -388,6 +398,24 @@ export function useCreateCreditNote() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreateCreditNoteInput): Promise<CreditNote> => {
+      const year = new Date().getFullYear()
+      // Credit note + number + lines in one transaction (fn_create_credit_note, 0024).
+      const { data: created, error: createError } = await supabase.rpc('fn_create_credit_note', {
+        p_parent_invoice_id: input.parentInvoiceId,
+        p_year: year,
+        p_reason: input.reason,
+        p_currency: input.currency,
+        p_fx_rate_to_mur: input.fxRateToMur,
+        p_subtotal: input.subtotal,
+        p_tax_rate: input.taxRate,
+        p_tax_amount: input.taxAmount,
+        p_total: input.total,
+        p_lines: input.lines,
+      })
+      if (!createError) return created
+      if (!isMissingRpc(createError)) throw createError
+
+      // Legacy multi-step path, only until migration 0024 is applied.
       const { data: userData } = await supabase.auth.getUser()
       if (!userData.user) throw new Error('Not authenticated')
 
@@ -398,7 +426,6 @@ export function useCreateCreditNote() {
         .single()
       if (parentError) throw parentError
 
-      const year = new Date().getFullYear()
       const { data: number, error: numberError } = await supabase.rpc('fn_allocate_document_number', {
         p_prefix: 'AV',
         p_year: year,

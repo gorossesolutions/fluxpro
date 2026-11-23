@@ -12,3 +12,12 @@ export function getErrorMessage(error: unknown): string {
   }
   return String(error)
 }
+
+/**
+ * True when PostgREST says an RPC doesn't exist (PGRST202) — i.e. the SQL migration that adds it
+ * hasn't been applied to this database yet. Lets a new app version ship before its migration
+ * without breaking the feature (migrations are applied by hand, see CLAUDE.md).
+ */
+export function isMissingRpc(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'PGRST202')
+}
